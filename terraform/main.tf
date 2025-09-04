@@ -46,9 +46,51 @@ resource "github_repository_file" "readme" {
   overwrite_on_create = true
 }
 
-# Adicionar mais recursos conforme necessário, como secrets para Actions
-resource "github_actions_secret" "example" {
+# GitHub Actions Secrets para CI/CD e Deploy
+resource "github_actions_secret" "databricks_host" {
   repository      = github_repository.vaga_linkedin.name
-  secret_name     = "EXAMPLE_SECRET"
-  plaintext_value = "example_value"  # Substitua por valores reais
+  secret_name     = "DATABRICKS_HOST"
+  plaintext_value = var.databricks_host
+}
+
+resource "github_actions_secret" "databricks_token" {
+  repository      = github_repository.vaga_linkedin.name
+  secret_name     = "DATABRICKS_TOKEN"
+  plaintext_value = var.databricks_token
+}
+
+resource "github_actions_secret" "gcp_credentials" {
+  repository      = github_repository.vaga_linkedin.name
+  secret_name     = "GCP_SERVICE_ACCOUNT_KEY"
+  plaintext_value = var.gcp_service_account_key
+}
+
+resource "github_actions_secret" "linkedin_username" {
+  repository      = github_repository.vaga_linkedin.name
+  secret_name     = "LINKEDIN_USERNAME"
+  plaintext_value = var.linkedin_username
+}
+
+resource "github_actions_secret" "linkedin_password" {
+  repository      = github_repository.vaga_linkedin.name
+  secret_name     = "LINKEDIN_PASSWORD"
+  plaintext_value = var.linkedin_password
+}
+
+resource "github_actions_secret" "kafka_bootstrap_servers" {
+  repository      = github_repository.vaga_linkedin.name
+  secret_name     = "KAFKA_BOOTSTRAP_SERVERS"
+  plaintext_value = var.kafka_bootstrap_servers
+}
+
+resource "github_actions_secret" "aws_access_key_id" {
+  repository      = github_repository.vaga_linkedin.name
+  secret_name     = "AWS_ACCESS_KEY_ID"
+  plaintext_value = var.aws_access_key_id
+}
+
+resource "github_actions_secret" "aws_secret_access_key" {
+  repository      = github_repository.vaga_linkedin.name
+  secret_name     = "AWS_SECRET_ACCESS_KEY"
+  plaintext_value = var.aws_secret_access_key
 }
