@@ -1,0 +1,12 @@
+pyspark==3.5.0
+kafka-python==2.0.2
+pandas==2.0.3
+boto3==1.28.57
+requests==2.31.0
+matplotlib==3.7.2
+notebook==7.0.3
+python-dotenv==1.0.0
+findspark==2.0.1
+selenium==4.15.0
+beautifulsoup4==4.12.2
+webdriver-manager==4.0.1
