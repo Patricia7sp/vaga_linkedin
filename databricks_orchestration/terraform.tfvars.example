@@ -1,0 +1,13 @@
+# Databricks Configuration
+databricks_host  = "https://<your-workspace>.cloud.databricks.com"
+databricks_token = "<your-databricks-token>"
+
+# Unity Catalog Configuration
+catalog_name = "vagas_linkedin_catalog"
+schema_name  = "bronze"
+
+# AWS Configuration (update with your values)
+cred_name    = "vagas_linkedin_s3_cred"
+extloc_name  = "vagas_linkedin_bronze_location"
+s3_uri       = "s3://your-bucket-name/bronze/"
+iam_role_arn = "arn:aws:iam::123456789012:role/databricks-uc-access"
