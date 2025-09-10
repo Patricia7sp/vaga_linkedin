@@ -104,15 +104,117 @@ O projeto será assistido por agentes de IA especializados, cada um com sua fun�
 
 ---
 
-## 🚧 Status Inicial
+## 🏆 Conquistas e Resultados Técnicos
 
-- [ ] Etapa 1: Infraestrutura – **em preparação**
-- [ ] Etapa 2: Extração Streaming – **aguardando infraestrutura**
-- [ ] Etapa 3: Armazenamento – **aguardando dados**
-- [ ] Etapa 4: Integração com Databricks – **pendente**
-- [ ] Etapa 5: Transformação – **pendente**
-- [ ] Etapa 6: Visualização – **em planejamento**
-- [ ] Etapa 7: Orquestração com IA – **em desenvolvimento**
+### ✅ **Pipeline de Dados End-to-End Funcional**
+Desenvolvido e implementado com sucesso um sistema completo de extração, processamento e armazenamento de dados em tempo real, demonstrando competências avançadas em:
+
+- **🏗️ Arquitetura de Dados Moderna:** Infraestrutura cloud-native no Google Cloud Platform com Service Accounts e IAM configurados
+- **⚡ Streaming de Dados em Tempo Real:** Apache Kafka + Zookeeper + PySpark Structured Streaming operacional
+- **☁️ Integração Cloud:** Sincronização automática com Google Cloud Storage, dados organizados e versionados
+- **🤖 Engenharia de IA:** Sistema multi-agentes implementado para orquestração inteligente do pipeline
+
+### 🎯 **Competências Técnicas Demonstradas**
+- **Engenharia de Dados:** PySpark, Apache Kafka, Data Streaming, ETL/ELT
+- **Cloud Computing:** Google Cloud Platform, Storage, IAM, Service Accounts  
+- **DevOps & Infraestrutura:** Terraform, Docker, Automação de Deploy
+- **Inteligência Artificial:** Agentes autônomos, Prompt Engineering, Automação Inteligente
+- **Desenvolvimento:** Python, Selenium, APIs, Microserviços
+
+### 🚀 **Próximos Marcos**
+- Integração com Databricks para análises avançadas
+- Dashboards e visualizações de dados interativas
+- Expansão do sistema para outras fontes de dados
+
+---
+
+## ⚙️ Configuração e Pré-requisitos
+
+### Dependências Necessárias
+- Python 3.8+
+- Apache Kafka e Zookeeper
+- Google Cloud SDK (gcloud CLI)
+- Java 8+ (para Kafka/Spark)
+- Selenium WebDriver
+
+### Configuração do Ambiente
+
+1. **Instalar dependências:**
+   ```bash
+   pip install -r requirements.txt
+   brew install kafka zookeeper  # macOS
+   ```
+
+2. **Configurar serviços:**
+   ```bash
+   brew services start zookeeper
+   brew services start kafka
+   ```
+
+3. **Configurar credenciais GCP:**
+   ```bash
+   # Criar Service Account no GCP Console
+   gcloud iam service-accounts create linkedin-scraper
+   gcloud iam service-accounts keys create gcp-credentials.json --iam-account=linkedin-scraper@[PROJECT-ID].iam.gserviceaccount.com
+   ```
+
+4. **Configurar arquivo .env:**
+   ```env
+   GOOGLE_APPLICATION_CREDENTIALS=./gcp-credentials.json
+   GCP_BUCKET_NAME=linkedin-dados-raw
+   GCP_PROJECT_ID=vaga-linkedin
+   KAFKA_BOOTSTRAP_SERVERS=localhost:9092
+   KAFKA_TOPIC=vagas_dados
+   ```
+
+---
+
+## 🚀 Como Executar
+
+### Execução Completa (Modo Streaming + GCP)
+```bash
+python main.py
+```
+
+### Execução Apenas Extração (Modo Offline)
+```bash
+python run_extraction_only.py
+```
+
+### Verificar Status dos Serviços
+```bash
+# Verificar Kafka/Zookeeper
+brew services list | grep -E "(kafka|zookeeper)"
+
+# Verificar autenticação GCP
+gcloud auth list
+export GOOGLE_APPLICATION_CREDENTIALS=./gcp-credentials.json
+gcloud auth application-default print-access-token
+```
+
+---
+
+## 📊 Resultados Obtidos
+
+### Pipeline Funcional
+- ✅ **Extração automatizada** de vagas do LinkedIn (6 categorias)
+- ✅ **Processamento em tempo real** via Kafka/PySpark
+- ✅ **Armazenamento na nuvem** (GCP Cloud Storage)
+- ✅ **Dados estruturados** em formato JSONL organizados por data
+
+### Dados Coletados
+- **Categorias:** Data Engineer, Data Analytics, Digital Analytics
+- **Campos extraídos:** título, empresa, localização, descrição, skills, salário
+- **Volume:** ~6 vagas por execução (limitado para testes)
+- **Formato:** JSONL com estrutura padronizada
+
+### Arquitetura Implementada
+```
+LinkedIn → Selenium → Kafka → PySpark → GCP Storage
+                              ↓
+                         Processamento
+                         + Enriquecimento
+```
 
 ---
 
