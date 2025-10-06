@@ -55,6 +55,9 @@ terraform/terraform.tfstate.backup
 terraform/.env
 *.tfplan
 *.tfstate
+*.tfvars
+!terraform/variables.tf
+!terraform/*.tf
 
 # Specific reference files - não devem subir para o repo
 agentes.md
@@ -81,11 +84,13 @@ logs/
 
 # Environment variables
 .env
+.env.*
+!.env.example
 gcp-credentials.json
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
+databricks-sa-key.json
+*.json
+!package.json
+!tsconfig.json
 
 # Jupyter Notebook
 .ipynb_checkpoints
@@ -113,3 +118,6 @@ venv/
 ENV/
 env.bak/
 venv.bak/
+
+# Desenvolvimento (apenas local, contém scripts com secrets)
+desenvolvimento/

@@ -1,0 +1,408 @@
+name: CI/CD Pipeline - Vagas LinkedIn
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to deploy'
+        required: true
+        default: 'staging'
+        type: choice
+        options:
+          - dev
+          - staging
+          - prod
+
+env:
+  PYTHON_VERSION: '3.10'
+  TERRAFORM_VERSION: '1.5.7'
+  GCP_PROJECT_ID: 'vaga-linkedin'
+  GCP_REGION: 'us-central1'
+
+jobs:
+  # ==================== STAGE 1: CODE QUALITY ====================
+  code-quality:
+    name: 🔍 Code Quality & Linting
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Cache dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install -r app_production/requirements.txt
+          pip install flake8 pylint black isort mypy pytest pytest-cov bandit safety
+
+      - name: Run Black (Code Formatting)
+        run: |
+          black --check --diff app_production/ agents/
+
+      - name: Run isort (Import Sorting)
+        run: |
+          isort --check-only --diff app_production/ agents/
+
+      - name: Run Flake8 (Linting)
+        run: |
+          flake8 app_production/ agents/ --count --select=E9,F63,F7,F82 --show-source --statistics
+          flake8 app_production/ agents/ --count --max-complexity=15 --max-line-length=120 --statistics
+
+      - name: Run Pylint (Advanced Linting)
+        continue-on-error: true
+        run: |
+          pylint app_production/agents/ --fail-under=7.0
+
+      - name: Run MyPy (Type Checking)
+        continue-on-error: true
+        run: |
+          mypy app_production/agents/ --ignore-missing-imports
+
+      - name: Run Bandit (Security Scan)
+        run: |
+          bandit -r app_production/ agents/ -ll
+
+      - name: Check dependencies for vulnerabilities
+        run: |
+          safety check --json
+
+  # ==================== STAGE 2: UNIT TESTS ====================
+  unit-tests:
+    name: 🧪 Unit Tests
+    runs-on: ubuntu-latest
+    needs: code-quality
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install -r app_production/requirements.txt
+          pip install pytest pytest-cov pytest-mock
+
+      - name: Run Unit Tests
+        run: |
+          pytest tests/unit/ -v --cov=app_production --cov=agents --cov-report=xml --cov-report=html --cov-report=term
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v4
+        with:
+          files: ./coverage.xml
+          flags: unittests
+          name: codecov-umbrella
+
+      - name: Check coverage threshold
+        run: |
+          coverage report --fail-under=70
+
+  # ==================== STAGE 3: INTEGRATION TESTS ====================
+  integration-tests:
+    name: 🔗 Integration Tests
+    runs-on: ubuntu-latest
+    needs: unit-tests
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_PASSWORD: postgres
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install -r app_production/requirements.txt
+          pip install pytest
+
+      - name: Run Integration Tests
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/test
+        run: |
+          if [ -d "tests/integration" ] && ls tests/integration/test_*.py > /dev/null 2>&1; then
+            pytest tests/integration/ -v --maxfail=3
+          else
+            echo "ℹ️ Nenhum teste de integração encontrado. Etapa ignorada."
+          fi
+
+  # ==================== STAGE 4: TERRAFORM VALIDATION ====================
+  terraform-validate:
+    name: 🏗️ Terraform Validation
+    runs-on: ubuntu-latest
+    needs: code-quality
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: ${{ env.TERRAFORM_VERSION }}
+
+      - name: Terraform Format Check
+        run: |
+          cd terraform
+          terraform fmt -check -recursive
+
+      - name: Terraform Init
+        run: |
+          cd terraform
+          terraform init -backend=false
+
+      - name: Terraform Validate
+        run: |
+          cd terraform
+          terraform validate
+
+      - name: TFLint
+        uses: terraform-linters/setup-tflint@v3
+        with:
+          tflint_version: latest
+
+      - name: Run TFLint
+        run: |
+          cd terraform
+          tflint --init
+          tflint
+
+  # ==================== STAGE 5: DOCKER BUILD ====================
+  docker-build:
+    name: 🐳 Docker Build & Scan
+    runs-on: ubuntu-latest
+    needs: [unit-tests, integration-tests]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./app_production
+          file: ./app_production/Dockerfile
+          push: false
+          tags: vaga-linkedin-prod:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: vaga-linkedin-prod:${{ github.sha }}
+          format: 'sarif'
+          output: 'trivy-results.sarif'
+
+      - name: Upload Trivy results to GitHub Security
+        uses: github/codeql-action/upload-sarif@v2
+        with:
+          sarif_file: 'trivy-results.sarif'
+
+  # ==================== STAGE 6: DEPLOY TO DEV ====================
+  deploy-dev:
+    name: 🚀 Deploy to Development
+    runs-on: ubuntu-latest
+    needs: [terraform-validate, docker-build]
+    if: github.ref == 'refs/heads/develop'
+    # environment:
+    #   name: development
+    #   url: https://dev.vaga-linkedin.com
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Build and Push Docker image
+        run: |
+          gcloud builds submit \
+            --tag=gcr.io/${{ env.GCP_PROJECT_ID }}/vaga-linkedin-prod:dev-${{ github.sha }} \
+            --project=${{ env.GCP_PROJECT_ID }} \
+            ./app_production
+
+      - name: Deploy to Cloud Run (Dev)
+        run: |
+          gcloud run jobs update vaga-linkedin-prod-dev \
+            --image=gcr.io/${{ env.GCP_PROJECT_ID }}/vaga-linkedin-prod:dev-${{ github.sha }} \
+            --region=${{ env.GCP_REGION }} \
+            --project=${{ env.GCP_PROJECT_ID }} \
+            || gcloud run jobs create vaga-linkedin-prod-dev \
+            --image=gcr.io/${{ env.GCP_PROJECT_ID }}/vaga-linkedin-prod:dev-${{ github.sha }} \
+            --region=${{ env.GCP_REGION }} \
+            --project=${{ env.GCP_PROJECT_ID }} \
+            --memory=2Gi \
+            --cpu=1 \
+            --set-env-vars="ENVIRONMENT=development" \
+            --set-secrets="DATABRICKS_TOKEN=databricks-token:latest,TELEGRAM_BOT_TOKEN=telegram-bot-token:latest,RAPIDAPI_KEY=rapidapi-key:latest"
+
+  # ==================== STAGE 7: DEPLOY TO STAGING ====================
+  deploy-staging:
+    name: 🎭 Deploy to Staging
+    runs-on: ubuntu-latest
+    needs: [terraform-validate, docker-build]
+    if: github.ref == 'refs/heads/main' || github.event.inputs.environment == 'staging'
+    # environment:
+    #   name: staging
+    #   url: https://staging.vaga-linkedin.com
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Build and Push Docker image
+        run: |
+          gcloud builds submit \
+            --tag=gcr.io/${{ env.GCP_PROJECT_ID }}/vaga-linkedin-prod:staging-${{ github.sha }} \
+            --project=${{ env.GCP_PROJECT_ID }} \
+            ./app_production
+
+      - name: Deploy to Cloud Run (Staging)
+        run: |
+          gcloud run jobs update vaga-linkedin-prod-staging \
+            --image=gcr.io/${{ env.GCP_PROJECT_ID }}/vaga-linkedin-prod:staging-${{ github.sha }} \
+            --region=${{ env.GCP_REGION }} \
+            --project=${{ env.GCP_PROJECT_ID }}
+
+      - name: Run Smoke Tests
+        run: |
+          # Execute smoke tests against staging
+          pytest tests/smoke/ --env=staging -v
+
+  # ==================== STAGE 8: DEPLOY TO PRODUCTION ====================
+  deploy-production:
+    name: 🏭 Deploy to Production
+    runs-on: ubuntu-latest
+    needs: deploy-staging
+    if: github.ref == 'refs/heads/main' && github.event.inputs.environment == 'prod'
+    # environment:
+    #   name: production
+    #   url: https://vaga-linkedin.com
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Build and Push Docker image
+        run: |
+          gcloud builds submit \
+            --tag=gcr.io/${{ env.GCP_PROJECT_ID }}/vaga-linkedin-prod:v5-${{ github.sha }} \
+            --project=${{ env.GCP_PROJECT_ID }} \
+            ./app_production
+
+      - name: Deploy to Cloud Run (Production)
+        run: |
+          gcloud run jobs update vaga-linkedin-prod-v5 \
+            --image=gcr.io/${{ env.GCP_PROJECT_ID }}/vaga-linkedin-prod:v5-${{ github.sha }} \
+            --region=${{ env.GCP_REGION }} \
+            --project=${{ env.GCP_PROJECT_ID }}
+
+      - name: Create GitHub Release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: v5-${{ github.sha }}
+          release_name: Release v5-${{ github.sha }}
+          body: |
+            Production deployment
+            - Commit: ${{ github.sha }}
+            - Date: ${{ github.event.head_commit.timestamp }}
+          draft: false
+          prerelease: false
+
+  # ==================== STAGE 9: POST-DEPLOY VALIDATION ====================
+  post-deploy-validation:
+    name: ✅ Post-Deploy Validation
+    runs-on: ubuntu-latest
+    needs: deploy-production
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Run E2E Tests
+        run: |
+          pytest tests/e2e/ --env=production -v
+
+      - name: Health Check
+        run: |
+          # Verify Cloud Run job is healthy
+          gcloud run jobs describe vaga-linkedin-prod-v5 \
+            --region=${{ env.GCP_REGION }} \
+            --project=${{ env.GCP_PROJECT_ID }}
+
+      - name: Notify via Email
+        if: always()
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: smtp.gmail.com
+          server_port: 587
+          username: ${{ secrets.GMAIL_USERNAME }}
+          password: ${{ secrets.GMAIL_APP_PASSWORD }}
+          subject: '🚀 Production Deployment - ${{ job.status }}'
+          body: |
+            Pipeline Status: ${{ job.status }}
+            
+            ✅ Production deployment completed
+            Commit: ${{ github.sha }}
+            Branch: ${{ github.ref }}
+            
+            View details: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          to: ${{ secrets.NOTIFICATION_EMAIL }}
+          from: Vaga LinkedIn CI/CD

@@ -1,0 +1,39 @@
+[flake8]
+max-line-length = 120
+max-complexity = 15
+exclude =
+    .git,
+    __pycache__,
+    .venv,
+    vaga_linkedin,
+    build,
+    dist,
+    *.egg-info,
+    .pytest_cache,
+    .mypy_cache,
+    spark-warehouse
+
+# Error codes to ignore
+ignore =
+    E203,  # whitespace before ':'
+    E501,  # line too long (handled by black)
+    W503,  # line break before binary operator
+    W504,  # line break after binary operator
+    E402,  # module level import not at top of file
+
+# Select specific error codes
+select = E,W,F,C,N
+
+# Per-file ignores
+per-file-ignores =
+    __init__.py:F401
+    test_*.py:F401,F811
+
+# Show source code for each error
+show-source = True
+
+# Show statistics
+statistics = True
+
+# Count errors
+count = True

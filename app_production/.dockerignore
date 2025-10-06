@@ -1,0 +1,33 @@
+# Python artifacts
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+
+# Virtual environments
+.venv/
+venv/
+ENV/
+
+# Git
+.git/
+.gitignore
+
+# IDE configs
+.vscode/
+.idea/
+*.code-workspace
+
+# Local data and secrets
+*.env
+*.log
+logs/
+data_extracts/
+private/
+
+# Terraform state backups (managed externally)
+*.tfstate
+*.tfstate.*
+
+# Docker
+Dockerfile

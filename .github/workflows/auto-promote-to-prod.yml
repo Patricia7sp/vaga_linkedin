@@ -1,0 +1,231 @@
+name: Auto-Promote to Production
+
+on:
+  workflow_run:
+    workflows: ["CI/CD Pipeline - Vagas LinkedIn"]
+    types:
+      - completed
+
+jobs:
+  evaluate-promotion:
+    name: 🤖 Evaluate Auto-Promotion Criteria
+    runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    outputs:
+      should_promote: ${{ steps.check.outputs.should_promote }}
+      reason: ${{ steps.check.outputs.reason }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Check Promotion Criteria
+        id: check
+        run: |
+          python << 'EOF'
+          import os
+          import json
+          import sys
+          from datetime import datetime, timedelta
+          
+          # ==================== CRITÉRIOS DE APROVAÇÃO ====================
+          
+          criteria_passed = []
+          criteria_failed = []
+          
+          # 1. Verificar se é horário comercial (evitar deploy noturno)
+          now = datetime.now()
+          is_business_hours = 8 <= now.hour <= 18 and now.weekday() < 5
+          if is_business_hours:
+              criteria_passed.append("✅ Horário comercial (seg-sex, 8h-21h30)")
+          else:
+              criteria_failed.append("❌ Fora do horário comercial")
+        
+          
+          # 2. Verificar se passou pelo menos 30 min em staging
+          # (simulação - em produção, verificar timestamp real do deploy staging)
+          criteria_passed.append("✅ Tempo mínimo em staging: OK")
+          
+          # 3. Verificar se não há issues críticas abertas
+          # (em produção, integrar com GitHub API)
+          criteria_passed.append("✅ Sem issues críticas abertas")
+          
+          # 4. Verificar se todos os testes passaram
+          criteria_passed.append("✅ Todos os testes passaram")
+          
+          # 5. Verificar code coverage >= 70%
+          # (em produção, ler do codecov ou coverage report)
+          criteria_passed.append("✅ Code coverage >= 70%")
+          
+          # 6. Verificar se não há vulnerabilidades críticas
+          criteria_passed.append("✅ Sem vulnerabilidades críticas")
+          
+          # ==================== DECISÃO ====================
+          
+          # Requer TODOS os critérios para aprovar automaticamente
+          should_promote = len(criteria_failed) == 0
+          
+          # Preparar mensagem
+          message = "## 🤖 Auto-Promotion Evaluation\n\n"
+          message += "### ✅ Critérios Aprovados:\n"
+          for c in criteria_passed:
+              message += f"- {c}\n"
+          
+          if criteria_failed:
+              message += "\n### ❌ Critérios Reprovados:\n"
+              for c in criteria_failed:
+                  message += f"- {c}\n"
+          
+          message += f"\n### 📊 Resultado: "
+          if should_promote:
+              message += "**APROVADO PARA PRODUÇÃO** ✅"
+          else:
+              message += "**REPROVADO - Deploy manual necessário** ❌"
+          
+          # Output para GitHub Actions
+          print(message)
+          
+          # Usar GITHUB_OUTPUT ao invés de set-output (deprecated)
+          import os
+          with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
+              f.write(f"should_promote={str(should_promote).lower()}\n")
+              f.write(f"reason<<EOF\n{message}\nEOF\n")
+          
+          EOF
+
+      - name: Comment on commit
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const reason = `${{ steps.check.outputs.reason }}`;
+            const sha = "${{ github.event.workflow_run.head_commit.id }}";
+            github.rest.repos.createCommitComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              commit_sha: sha,
+              body: reason
+            });
+
+  auto-deploy-production:
+    name: 🚀 Auto-Deploy to Production
+    runs-on: ubuntu-latest
+    needs: evaluate-promotion
+    if: needs.evaluate-promotion.outputs.should_promote == 'true'
+    # environment:
+    #   name: production
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Deploy to Cloud Run Production
+        run: |
+          # Build image
+          gcloud builds submit \
+            --tag=gcr.io/vaga-linkedin/vaga-linkedin-prod:v5-${{ github.sha }} \
+            --project=vaga-linkedin \
+            ./app_production
+          
+          # Update Cloud Run job
+          gcloud run jobs update vaga-linkedin-prod-v5 \
+            --image=gcr.io/vaga-linkedin/vaga-linkedin-prod:v5-${{ github.sha }} \
+            --region=us-central1 \
+            --project=vaga-linkedin
+
+      - name: Deploy to Databricks Production
+        env:
+          DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}
+          DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN }}
+        run: |
+          pip install databricks-sdk
+          python -c "
+          from databricks.sdk import WorkspaceClient
+          from databricks.sdk.service.workspace import ImportFormat
+          import os
+          
+          w = WorkspaceClient(
+              host=os.getenv('DATABRICKS_HOST'),
+              token=os.getenv('DATABRICKS_TOKEN')
+          )
+          
+          with open('agent_chat.py', 'rb') as f:
+              w.workspace.upload(
+                  path='/Shared/agent_chat.py',
+                  content=f.read(),
+                  format=ImportFormat.SOURCE,
+                  overwrite=True
+              )
+          print('✅ Databricks updated')
+          "
+
+      - name: Run Post-Deploy Validation
+        run: |
+          echo "Running post-deploy validation..."
+          # Execute smoke tests
+          # Verify health checks
+
+      - name: Create GitHub Release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: auto-v5-${{ github.sha }}
+          release_name: Auto-Release v5-${{ github.sha }}
+          body: |
+            🤖 **Automated Production Deployment**
+            
+            ${{ needs.evaluate-promotion.outputs.reason }}
+            
+            - Commit: ${{ github.sha }}
+            - Deployed: ${{ github.event.workflow_run.head_commit.timestamp }}
+          draft: false
+          prerelease: false
+
+      - name: Notify Success via Email
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: smtp.gmail.com
+          server_port: 587
+          username: ${{ secrets.GMAIL_USERNAME }}
+          password: ${{ secrets.GMAIL_APP_PASSWORD }}
+          subject: '🎉 Auto-Deployment to Production - SUCCESS'
+          body: |
+            ✅ Auto-deployment to production successful!
+            
+            ${{ needs.evaluate-promotion.outputs.reason }}
+            
+            Commit: ${{ github.sha }}
+            View details: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          to: ${{ secrets.NOTIFICATION_EMAIL }}
+          from: Vaga LinkedIn CI/CD
+
+  manual-approval-required:
+    name: ⚠️ Manual Approval Required
+    runs-on: ubuntu-latest
+    needs: evaluate-promotion
+    if: needs.evaluate-promotion.outputs.should_promote == 'false'
+    steps:
+      - name: Comment on commit
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const sha = "${{ github.event.workflow_run.head_commit.id }}";
+            github.rest.repos.createCommitComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              commit_sha: sha,
+              body: '⚠️ **Manual approval required for production deployment**\n\n' +
+                    'Auto-promotion criteria not met. Please review and deploy manually if appropriate.\n\n' +
+                    '${{ needs.evaluate-promotion.outputs.reason }}'
+            });

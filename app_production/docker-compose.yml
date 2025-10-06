@@ -1,0 +1,13 @@
+version: "3.9"
+services:
+  production:
+    build:
+      context: .
+    container_name: vaga-linkedin-production
+    env_file:
+      - .env
+    volumes:
+      - ./:/app
+    command: ["run"]
+    ports:
+      - "8080:8080"

@@ -1,11 +1,4 @@
-terraform {
-  required_providers {
-    github = {
-      source  = "integrations/github"
-      version = "~> 6.0"
-    }
-  }
-}
+# Terraform configuration moved to databricks_dlt.tf to avoid duplicates
 
 provider "github" {
   token = var.github_token
