@@ -68,7 +68,7 @@ def download_gcs_data():
 
             # Download JSON files for this domain
             f"data_extracts/*/{domain}/*.json"
-            blobs = bucket.list_blobs(prefix=f"data_extracts/")
+            blobs = bucket.list_blobs(prefix="data_extracts/")
             domain_blobs = [b for b in blobs if domain in b.name and b.name.endswith(".json")]
 
             local_files = []
@@ -126,10 +126,10 @@ def create_storage_credentials():
         )
 
         if result.returncode == 0:
-            print(f"✅ Storage credentials criado")
+            print("✅ Storage credentials criado")
             return storage_cred_name
         elif "already exists" in result.stderr.lower():
-            print(f"✅ Storage credentials já existe")
+            print("✅ Storage credentials já existe")
             return storage_cred_name
         else:
             print(f"⚠️  Erro storage credentials: {result.stderr[:100]}")
@@ -170,10 +170,10 @@ def create_external_location(storage_cred_name):
         )
 
         if result.returncode == 0:
-            print(f"✅ External location criado")
+            print("✅ External location criado")
             return external_location_name
         elif "already exists" in result.stderr.lower():
-            print(f"✅ External location já existe")
+            print("✅ External location já existe")
             return external_location_name
         else:
             print(f"⚠️  Erro external location: {result.stderr[:100]}")
@@ -406,12 +406,12 @@ def create_tables_referencing_volumes():
             full_table_name = f"{CATALOG}.{schema_name}.{table_name}"
 
             # Volume path for this domain
-            volume_path = f"/Volumes/{CATALOG}/{schema_name}/linkedin_data_volume/*.json"
+            _volume_path = f"/Volumes/{CATALOG}/{schema_name}/linkedin_data_volume/*.json"  # noqa: F841
 
             print(f"📝 Criando tabela: {full_table_name}")
             print(f"📁 Volume: {volume_path}")
 
-            create_table_sql = f"""
+            create_table_sql = """
 CREATE TABLE IF NOT EXISTS {full_table_name}
 USING JSON
 OPTIONS (
@@ -465,13 +465,13 @@ def create_volumes_and_tables_via_sql():
 
             # GCS location for this domain (production path)
             gcs_location = f"{gcs_uri}/{domain}/"
-            volume_path = f"/Volumes/{CATALOG}/{schema_name}/{volume_name}/*.json"
+            _volume_path = f"/Volumes/{CATALOG}/{schema_name}/{volume_name}/*.json"  # noqa: F841
 
             print(f"📁 Criando volume: {full_volume_name}")
             print(f"🔗 GCS: {gcs_location}")
 
             # Create Volume SQL
-            create_volume_sql = f"""
+            create_volume_sql = """
 CREATE VOLUME IF NOT EXISTS {full_volume_name}
 USING '{gcs_location}'
 COMMENT 'Volume para dados JSON {domain.replace("_", " ").title()} do LinkedIn no GCS'
@@ -487,7 +487,7 @@ COMMENT 'Volume para dados JSON {domain.replace("_", " ").title()} do LinkedIn n
                 # Now create table referencing the volume
                 print(f"📝 Criando tabela: {full_table_name}")
 
-                create_table_sql = f"""
+                create_table_sql = """
 CREATE TABLE IF NOT EXISTS {full_table_name}
 USING JSON
 OPTIONS (

@@ -237,7 +237,7 @@ class DLTValidator:
 
             # Fix dlt.read_stream on raw schemas
             if f'dlt.read_stream("{domain}_raw")' in content:
-                replacement = f"""spark.readStream
+                replacement = """spark.readStream
         .format("cloudFiles")
         .option("cloudFiles.format", "json")
         .option("cloudFiles.inferColumnTypes", "true")

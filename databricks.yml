@@ -1,0 +1,19 @@
+# This is a Databricks asset bundle definition for vaga_linkedin.
+# The Databricks extension requires databricks.yml configuration file.
+# See https://docs.databricks.com/dev-tools/bundles/index.html for documentation.
+
+bundle:
+  name: vaga_linkedin
+
+targets:
+  dev:
+    mode: development
+    default: true
+    workspace:
+      host: https://dbc-14d16b60-2882.cloud.databricks.com
+
+  ## Optionally, there could be 'staging' or 'prod' targets here.
+  #
+  # prod:
+  #   workspace:
+  #     host: https://dbc-14d16b60-2882.cloud.databricks.com

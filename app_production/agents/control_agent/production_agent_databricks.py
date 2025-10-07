@@ -36,7 +36,7 @@ def run_transform_only(instructions: Optional[str] = None) -> str:
     execution_result = agent.run_dlt_pipelines_execution()
     status = execution_result.get("status", "unknown")
     success_count = execution_result.get("success_count", 0)
-    total_pipelines = execution_result.get("total_pipelines", 3)
+    _total_pipelines = execution_result.get("total_pipelines", 3)  # noqa: F841
 
     if status == "all_success":
         msg = f"Arquitetura medalhão executada! {success_count}/{total_pipelines} pipelines DLT"

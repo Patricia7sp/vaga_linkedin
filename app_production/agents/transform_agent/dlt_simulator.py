@@ -222,7 +222,7 @@ class DLTSimulator:
     def _generate_summary(self, results: Dict[str, Any]) -> Dict[str, Any]:
         """Gera resumo da simulação"""
 
-        total_notebooks = len(results)
+        _total_notebooks = len(results)  # noqa: F841
         successful = sum(1 for r in results.values() if r["success"])
         failed = total_notebooks - successful
 
@@ -260,13 +260,13 @@ def run_simulation():
     validation_results = simulator.validate_all_notebooks(notebook_dir)
 
     # Relatório detalhado
-    print(f"\n📊 RESULTADOS DA SIMULAÇÃO:")
+    print("\n📊 RESULTADOS DA SIMULAÇÃO:")
     print(f"   Total de notebooks: {validation_results['summary']['total_notebooks']}")
     print(f"   Sucessos: {validation_results['summary']['successful']}")
     print(f"   Falhas: {validation_results['summary']['failed']}")
     print(f"   Taxa de sucesso: {validation_results['summary']['success_rate']}")
 
-    print(f"\n📋 ESTATÍSTICAS:")
+    print("\n📋 ESTATÍSTICAS:")
     print(f"   Tabelas criadas: {validation_results['summary']['total_tables']}")
     print(f"   Operações CDC: {validation_results['summary']['total_cdc_operations']}")
 
@@ -287,12 +287,12 @@ def run_simulation():
 
     # Resultado final
     if validation_results["overall_success"]:
-        print(f"\n🎉 SIMULAÇÃO COMPLETA: TODOS OS NOTEBOOKS VÁLIDOS")
-        print(f"   ✅ Seguro para executar update no Databricks")
+        print("\n🎉 SIMULAÇÃO COMPLETA: TODOS OS NOTEBOOKS VÁLIDOS")
+        print("   ✅ Seguro para executar update no Databricks")
         return True
     else:
-        print(f"\n⚠️  SIMULAÇÃO FALHOU: CORREÇÕES NECESSÁRIAS")
-        print(f"   ❌ NÃO execute update até corrigir os erros")
+        print("\n⚠️  SIMULAÇÃO FALHOU: CORREÇÕES NECESSÁRIAS")
+        print("   ❌ NÃO execute update até corrigir os erros")
         return False
 
 

@@ -41,7 +41,7 @@ class RapidAPILinkedInExtractor:
         self.request_count = 0
         self.max_requests = 100  # Limite do plano gratuito
 
-        print(f"✅ RapidAPI LinkedIn Extractor inicializado")
+        print("✅ RapidAPI LinkedIn Extractor inicializado")
         print(f"📊 Limite: {self.max_requests} requests/mês")
 
     def search_jobs(
@@ -111,7 +111,7 @@ class RapidAPILinkedInExtractor:
                 return normalized_jobs[:limit]
 
             elif response.status_code == 429:
-                print(f"⚠️ Rate limit atingido. Aguarde antes de nova requisição.")
+                print("⚠️ Rate limit atingido. Aguarde antes de nova requisição.")
                 return []
 
             else:
@@ -172,7 +172,7 @@ class RapidAPILinkedInExtractor:
                         # Calcular se é recente (< 7 dias)
                         days_ago = (datetime.now() - posted_dt).days
                         is_recent = days_ago < 7
-                    except:
+                    except Exception:  # noqa: E722
                         # Se falhar, usar timestamp atual
                         posted_time_ts = datetime.now()
                         is_recent = True
@@ -372,7 +372,7 @@ def run_extraction(categories: Optional[Dict[str, List[str]]] = None, output_dir
     print(f"Total de vagas: {sum(r['count'] for r in results.values())}")
     print(f"Requests usados: {stats['requests_used']}/{stats['limit']}")
     print(f"Requests restantes: {stats['requests_remaining']}")
-    print(f"=" * 70 + "\n")
+    print("=" * 70 + "\n")
 
     return {"results": results, "stats": stats, "timestamp": timestamp}
 
@@ -384,4 +384,4 @@ if __name__ == "__main__":
     summary = run_extraction()
 
     print("\n✅ Extração concluída!")
-    print(f"📁 Arquivos salvos em: ./data/linkedin_jobs/")
+    print("📁 Arquivos salvos em: ./data/linkedin_jobs/")

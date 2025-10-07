@@ -64,7 +64,6 @@ env_path = project_root / ".env"
 load_dotenv(dotenv_path=env_path)
 
 # Set GCP credentials from environment
-import os
 
 if os.getenv("GOOGLE_APPLICATION_CREDENTIALS"):
     os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = os.getenv("GOOGLE_APPLICATION_CREDENTIALS")
@@ -393,7 +392,7 @@ def extract_jobs_via_linkedin_scraping(search_term, max_results=50, category=Non
                         if job_cards and len(job_cards) > 5:
                             print(f"✅ Após scroll (tentativa {attempt+1}): {len(job_cards)} vagas encontradas")
                             break
-                    except:
+                    except Exception:  # noqa: E722
                         continue
 
             if job_cards and len(job_cards) > 5:
@@ -463,8 +462,8 @@ def extract_jobs_via_linkedin_scraping(search_term, max_results=50, category=Non
                 job_url = None
                 try:
                     url_element = card.find_element(By.CSS_SELECTOR, "h3 a")
-                    job_url = url_element.get_attribute("href")
-                except:
+                    job_url = url_element.get_attribute("hre")
+                except Exception:  # noqa: E722
                     job_url = f"https://linkedin.com/jobs/search/{processed}"
 
                 # Get company name with improved selectors
@@ -487,7 +486,7 @@ def extract_jobs_via_linkedin_scraping(search_term, max_results=50, category=Non
                         company = company_element.text.strip()
                         if company:
                             break
-                    except:
+                    except Exception:  # noqa: E722
                         continue
 
                 # Get location
@@ -500,7 +499,7 @@ def extract_jobs_via_linkedin_scraping(search_term, max_results=50, category=Non
                         location = location_element.text.strip()
                         if location and location != company:  # Avoid duplicating company name
                             break
-                    except:
+                    except Exception:  # noqa: E722
                         continue
 
                 # Extract description by clicking on job title link (opens full job page)
@@ -522,12 +521,12 @@ def extract_jobs_via_linkedin_scraping(search_term, max_results=50, category=Non
                             title_link = card.find_element(By.CSS_SELECTOR, selector)
                             if title_link:
                                 break
-                        except:
+                        except Exception:  # noqa: E722
                             continue
 
                     if title_link:
                         # Get the job URL
-                        job_url = title_link.get_attribute("href")
+                        job_url = title_link.get_attribute("hre")
 
                         if job_url:
                             # Navigate to job page
@@ -653,7 +652,7 @@ def extract_jobs_via_linkedin_scraping(search_term, max_results=50, category=Non
                     try:
                         driver.get(current_url)
                         time.sleep(2)
-                    except:
+                    except Exception:  # noqa: E722
                         pass
 
                 # Extract work modality (Remote, Hybrid, On-site) - usando título, localização e descrição
@@ -684,7 +683,7 @@ def extract_jobs_via_linkedin_scraping(search_term, max_results=50, category=Non
                             elif "presencial" in insight_text or "on-site" in insight_text:
                                 work_modality = "Presencial"
                                 break
-                except:
+                except Exception:  # noqa: E722
                     pass
 
                 # Extract contract type - usando apenas título
@@ -702,7 +701,7 @@ def extract_jobs_via_linkedin_scraping(search_term, max_results=50, category=Non
                         contract_type = "Pleno"
                     elif "freelanc" in title_text or "freela" in title_text:
                         contract_type = "Freelance"
-                except:
+                except Exception:  # noqa: E722
                     pass
 
                 # Add job creation timestamp and unique identifier with today's date
@@ -958,7 +957,6 @@ def start_pyspark_streaming_consumer():
 
         # Enhanced Spark configuration for robust streaming
         try:
-            import os
 
             # Debug environment variables
             java_home = os.environ.get("JAVA_HOME")
@@ -1062,8 +1060,6 @@ def start_pyspark_streaming_consumer():
             & (col("company").isNotNull())
         )
 
-        import os
-
         os.makedirs("streaming_output", exist_ok=True)
 
         # Create separate streaming queries for each job type with date partitioning
@@ -1120,7 +1116,7 @@ def produce_jobs_to_kafka(producer, jobs, job_type):
             future = producer.send(KAFKA_CONFIG["topic_name"], key=job_type, value=job)
 
             # Wait for confirmation
-            record_metadata = future.get(timeout=10)
+            _record_metadata = future.get(timeout=10)  # noqa: F841
             messages_sent += 1
 
         producer.flush()
@@ -1149,7 +1145,7 @@ def check_for_new_jobs(existing_jobs_path, new_jobs):
                             try:
                                 job = json.loads(line.strip())
                                 existing_job_ids.add(job.get("job_id", ""))
-                            except:
+                            except Exception:  # noqa: E722
                                 continue
 
         # Find truly new jobs
@@ -1231,18 +1227,18 @@ def run_extract_offline():
         results[category] = {"count": len(unique_jobs), "file": filepath}
 
     # After all categories are processed, sync to GCP
-    print(f"\n🔄 Sincronizando dados com GCP Cloud Storage...")
+    print("\n🔄 Sincronizando dados com GCP Cloud Storage...")
     sync_success = sync_data_to_gcp(data_dir)
 
     if sync_success:
-        print(f"✅ Dados sincronizados com sucesso no bucket GCP!")
+        print("✅ Dados sincronizados com sucesso no bucket GCP!")
     else:
-        print(f"⚠️ Dados salvos apenas localmente - verifique configuração GCP")
+        print("⚠️ Dados salvos apenas localmente - verifique configuração GCP")
 
     total_jobs = sum(result["count"] for result in results.values())
     print(f"\n📊 Total extraído: {total_jobs} vagas")
     print(f"📂 Dados locais: {data_dir}")
-    print(f"☁️ Bucket GCP: linkedin-dados-raw (se configurado)")
+    print("☁️ Bucket GCP: linkedin-dados-raw (se configurado)")
 
     return results
 

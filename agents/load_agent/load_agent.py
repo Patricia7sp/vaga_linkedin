@@ -635,7 +635,7 @@ def register_raw_tables(spark):
                     sample_df.createOrReplaceTempView(f"temp_{domain}_view")
 
                     spark.sql(
-                        f"""
+                        """
                         CREATE TABLE IF NOT EXISTS {table_name}
                         USING JSON
                         LOCATION '{pattern}'

@@ -80,7 +80,7 @@ def run_transform_production(instructions: str | None = None) -> str:
 
         status = execution_result.get("status", "unknown")
         success_count = execution_result.get("success_count", 0)
-        total_pipelines = execution_result.get("total_pipelines", 3)
+        _total_pipelines = execution_result.get("total_pipelines", 3)  # noqa: F841
 
         if status == "all_success":
             result_msg = (

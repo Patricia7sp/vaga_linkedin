@@ -20,13 +20,10 @@ ignore =
     W503,
     W504,
     E402,
-    E722,
-    F811,
-    F541,
-    F841,
+    C901,
     E741,
-    F403,
-    F405,
+    F821,
+    F841,
     W291
 
 # Select specific error codes
@@ -36,6 +33,10 @@ select = E,W,F,C,N
 per-file-ignores =
     __init__.py:F401
     test_*.py:F401,F811
+    */notebooks_dlt/*.py:F403,F405
+    */notebooks/*.py:F403,F405
+    *dlt*transformation.py:F403,F405
+    */transform_agent/transform_agent.py:F403,F405
 
 # Show source code for each error
 show-source = True

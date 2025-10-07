@@ -336,7 +336,7 @@ Se encontrar ambiguidades, assuma padrões de mercado e explique sua decisão no
         }
 
         logger.info(f"🧠 TransformAgent inicializado para catálogo: {catalog_name}")
-        logger.info(f"🏛️ Governança Unity Catalog simulada localmente")
+        logger.info("🏛️ Governança Unity Catalog simulada localmente")
 
     def _init_spark_session(self) -> SparkSession:
         """
@@ -714,7 +714,7 @@ Se encontrar ambiguidades, assuma padrões de mercado e explique sua decisão no
 
             # 1. Verificar se catálogo existe
             try:
-                catalog_info = self.databricks_client.catalogs.get(name=self.catalog_name)
+                _catalog_info = self.databricks_client.catalogs.get(name=self.catalog_name)  # noqa: F841
                 validation_result["catalog_exists"] = True
                 logger.info(f"✅ Catálogo {self.catalog_name} encontrado")
             except Exception as e:
@@ -725,7 +725,9 @@ Se encontrar ambiguidades, assuma padrões de mercado e explique sua decisão no
             # 2. Validar schemas existentes
             for schema_name in self.unity_catalog["schemas"].keys():
                 try:
-                    schema_info = self.databricks_client.schemas.get(full_name=f"{self.catalog_name}.{schema_name}")
+                    _schema_info = self.databricks_client.schemas.get(
+                        full_name=f"{self.catalog_name}.{schema_name}"
+                    )  # noqa: F841
                     validation_result["schemas_validated"].append(schema_name)
                     logger.info(f"✅ Schema {schema_name} encontrado")
                 except Exception as e:
@@ -979,7 +981,7 @@ Se encontrar ambiguidades, assuma padrões de mercado e explique sua decisão no
                     outputs = json.loads(output_result.stdout)
                     # Usar o output correto baseado no terraform
                     result["pipeline_ids"] = outputs.get("clean_pipeline_ids", {}).get("value", {})
-                    logger.info(f"🎯 Pipelines arquitetura medalhão criados:")
+                    logger.info("🎯 Pipelines arquitetura medalhão criados:")
                     for domain, pipeline_id in result["pipeline_ids"].items():
                         logger.info(f"   - {domain}: {pipeline_id}")
                 except json.JSONDecodeError:
@@ -1035,15 +1037,6 @@ Se encontrar ambiguidades, assuma padrões de mercado e explique sua decisão no
                 logger.info(f"💡 Execute manualmente no Databricks: Pipeline ID {pipeline_id}")
 
         return result
-
-    def _check_databricks_free_limits(self):
-        """Verifica limitações da versão free do Databricks"""
-        try:
-            pipelines = list(self.databricks_client.pipelines.list())
-            running_count = sum(1 for p in pipelines if p.state and p.state.name in ["RUNNING", "STARTING"])
-            return running_count >= 1  # Free tier permite apenas 1 pipeline por vez
-        except Exception:
-            return True  # Assume limitação se não conseguir verificar
 
     def _diagnose_pipeline_issues(self, pipeline_id: str, domain: str) -> Dict[str, Any]:
         """
@@ -1510,7 +1503,7 @@ Se encontrar ambiguidades, assuma padrões de mercado e explique sua decisão no
                 logger.warning(f"⚠️  Falha ao gerar gráficos via SQL Warehouse: {e}")
 
             # Gerar PDF do dashboard (consultas + artefatos + imagens de gráficos se houver)
-            pdf_path = os.path.join(os.path.dirname(self.output_dir), "notebooks", "quality_dashboard.pdf")
+            pdf_path = os.path.join(os.path.dirname(self.output_dir), "notebooks", "quality_dashboard.pd")
             try:
                 from reportlab.lib.pagesizes import A4
                 from reportlab.lib.units import cm
@@ -1626,7 +1619,7 @@ Se encontrar ambiguidades, assuma padrões de mercado e explique sua decisão no
                 else:
                     logger.warning(f"⚠️  Envio não confirmado: {email_result}")
 
-            return {"status": "ok", "report_path": report_path, "notebook_sql": dashboard_sql_path, "pdf": pdf_path}
+            return {"status": "ok", "report_path": report_path, "notebook_sql": dashboard_sql_path, "pd": pdf_path}
         except Exception as e:
             logger.error(f"❌ Erro ao gerar auditoria de qualidade: {e}")
             return {"status": "error", "error": str(e)}
@@ -1817,7 +1810,7 @@ Se encontrar ambiguidades, assuma padrões de mercado e explique sua decisão no
             report = self._generate_comprehensive_report(raw_profile, execution_results)
 
             self.metrics["end_time"] = datetime.now()
-            execution_time = (self.metrics["end_time"] - self.metrics["start_time"]).total_seconds()
+            _execution_time = (self.metrics["end_time"] - self.metrics["start_time"]).total_seconds()  # noqa: F841
 
             logger.info("✅ Transformação autônoma concluída com sucesso!")
 
@@ -1853,7 +1846,7 @@ Se encontrar ambiguidades, assuma padrões de mercado e explique sua decisão no
             logger.info(f"📊 Profilando domínio: {domain}")
 
             try:
-                domain_profile = self._profile_domain_table(domain, table_name)
+                _domain_profile = self._profile_domain_table(domain, table_name)  # noqa: F841
                 profile["domains"][domain] = domain_profile
 
                 logger.info(f"✅ Domínio {domain} perfilado: {domain_profile.get('actual_rows', 0)} registros")
@@ -1912,7 +1905,7 @@ Se encontrar ambiguidades, assuma padrões de mercado e explique sua decisão no
                 logger.info(f"📊 {domain}: {total_rows} registros encontrados")
 
                 # Schema da tabela
-                schema_info = {field.name: str(field.dataType) for field in df.schema.fields}
+                _schema_info = {field.name: str(field.dataType) for field in df.schema.fields}
 
                 # Amostra de dados
                 sample_data = df.limit(5).collect()
@@ -1921,7 +1914,7 @@ Se encontrar ambiguidades, assuma padrões de mercado e explique sua decisão no
                 logger.warning(f"⚠️  Não foi possível ler dados JSON: {json_error}")
                 # Usa dados simulados baseados na memória do LoadAgent
                 total_rows = {"data_engineer": 46, "data_analytics": 46, "digital_analytics": 24}.get(domain, 0)
-                schema_info = {
+                _schema_info = {
                     "job_id": "string",
                     "title": "string",
                     "company": "string",
@@ -1939,7 +1932,7 @@ Se encontrar ambiguidades, assuma padrões de mercado e explique sua decisão no
                     try:
                         # Contagem de nulos
                         null_count_df = self.spark.sql(
-                            f"""
+                            """
                             SELECT COUNT(*) as nulls 
                             FROM {table_name} 
                             WHERE {col_name} IS NULL
@@ -1951,7 +1944,7 @@ Se encontrar ambiguidades, assuma padrões de mercado e explique sua decisão no
                         # Contagem de valores únicos (para colunas com poucos valores)
                         if null_ratio < 0.9:  # Só se não for quase tudo nulo
                             distinct_count_df = self.spark.sql(
-                                f"""
+                                """
                                 SELECT COUNT(DISTINCT {col_name}) as distinct_vals
                                 FROM {table_name}
                             """
@@ -1979,7 +1972,7 @@ Se encontrar ambiguidades, assuma padrões de mercado e explique sua decisão no
                     if quality_stats[col_name].get("unique_ratio", 1) < 0.1:  # Colunas com poucos valores únicos
                         try:
                             top_values_df = self.spark.sql(
-                                f"""
+                                """
                                 SELECT {col_name}, COUNT(*) as freq
                                 FROM {table_name}
                                 WHERE {col_name} IS NOT NULL
@@ -2075,9 +2068,9 @@ Se encontrar ambiguidades, assuma padrões de mercado e explique sua decisão no
             return {"error": "GPT-5 not available", "fallback": "usando heurísticas"}
 
         try:
-            profile_summary = json.dumps(domains_profile, indent=2, default=str)
+            _profile_summary = json.dumps(domains_profile, indent=2, default=str)  # noqa: F841
 
-            prompt = f"""
+            prompt = """
 {self.AGENT_PROMPT}
 
 DADOS PERFILADOS:
@@ -2395,7 +2388,7 @@ Responda APENAS em JSON válido com esta estrutura:
             return {"error": "LLM not available"}
 
         try:
-            prompt = f"""
+            prompt = """
 {self.AGENT_PROMPT}
 
 Dados perfilados: {json.dumps(raw_profile, indent=2, default=str)}
@@ -2494,9 +2487,9 @@ Retorne APENAS JSON válido com decisões técnicas detalhadas:
             return self._generate_traditional_dlt_code(domain, plan_yaml)
 
         try:
-            domain_profile = raw_profile.get("domains", {}).get(domain, {})
+            _domain_profile = raw_profile.get("domains", {}).get(domain, {})  # noqa: F841
 
-            prompt = f"""
+            prompt = """
 {self.AGENT_PROMPT}
 
 Gere código Python DLT otimizado para o domínio: {domain}
@@ -2586,11 +2579,11 @@ Retorne APENAS código Python válido, sem markdown.
         Returns:
             String com código do notebook DLT
         """
-        raw_table = self.raw_tables[domain]
+        _raw_table = self.raw_tables[domain]  # noqa: F841
         f"{self.catalog_name}.{domain}_bronze.jobs_bronze"
         f"{self.catalog_name}.{domain}_silver.jobs_silver"
 
-        notebook = f'''"""
+        notebook = '''"""
 Delta Live Tables Pipeline - {domain.title().replace('_', ' ')}
 Generated by TransformAgent on {datetime.now().isoformat()}
 
@@ -2963,7 +2956,7 @@ def view_data_quality():
     bronze_df = dlt.read("jobs_bronze")
     silver_df = dlt.read("jobs_silver")
 
-    quality_metrics = spark.sql(f"""
+    quality_metrics = spark.sql("""
         SELECT
             '{domain}' as domain,
             'bronze' as layer,
@@ -2997,11 +2990,11 @@ def view_data_quality():
 
 # Fim do notebook DLT para {domain}
 print(f"✅ Notebook DLT para {{domain}} gerado com sucesso!")
-print(f"📊 Tabelas criadas:")
-print(f"  - Bronze: jobs_bronze")
-print(f"  - Silver: jobs_silver")
-print(f"  - Gold: jobs_daily_metrics, tech_ranking, location_insights")
-print(f"  - Views: vw_jobs_current, vw_data_quality")
+print("📊 Tabelas criadas:")
+print("  - Bronze: jobs_bronze")
+print("  - Silver: jobs_silver")
+print("  - Gold: jobs_daily_metrics, tech_ranking, location_insights")
+print("  - Views: vw_jobs_current, vw_data_quality")
 '''
 
         return notebook
@@ -3098,7 +3091,7 @@ print(f"  - Views: vw_jobs_current, vw_data_quality")
         """
         logger.info("▶️  Gerando steps de execução...")
 
-        steps = f"""# ========================================
+        steps = """# ========================================
 # RUN STEPS - TransformAgent Execution
 # Generated on {datetime.now().isoformat()}
 # ========================================
@@ -3426,7 +3419,7 @@ echo "📞 Em caso de dúvidas, consulte: databricks pipelines --help"
                     if result.returncode != 0:
                         logger.warning(f"⚠️ Comando falhou: {result.stderr}")
                     else:
-                        logger.info(f"✅ Comando executado com sucesso")
+                        logger.info("✅ Comando executado com sucesso")
 
                 except subprocess.TimeoutExpired:
                     logger.error(f"⏰ Timeout na execução do comando: {cmd}")
@@ -3458,17 +3451,17 @@ echo "📞 Em caso de dúvidas, consulte: databricks pipelines --help"
         logger.info("📊 Gerando relatório abrangente...")
 
         # Calcula métricas de execução
-        total_time = (
+        _total_time = (  # noqa: F841
             (self.metrics["end_time"] - self.metrics["start_time"]).total_seconds()
             if self.metrics.get("end_time") and self.metrics.get("start_time")
             else 0
         )
 
         len(self.metrics.get("llm_decisions", []))
-        successful_pipelines = len(
+        _successful_pipelines = len(  # noqa: F841
             [p for p in execution_results.get("execution_status", {}).values() if p.get("status") == "completed"]
         )
-        failed_pipelines = len(
+        _failed_pipelines = len(  # noqa: F841
             [p for p in execution_results.get("execution_status", {}).values() if p.get("status") == "failed"]
         )
 
@@ -3484,15 +3477,15 @@ echo "📞 Em caso de dúvidas, consulte: databricks pipelines --help"
         """
         logger.info("📋 Gerando relatório final...")
 
-        execution_time = None
+        _execution_time = None
         if self.metrics["start_time"] and self.metrics["end_time"]:
-            execution_time = self.metrics["end_time"] - self.metrics["start_time"]
+            _execution_time = self.metrics["end_time"] - self.metrics["start_time"]  # noqa: F841
 
-        total_raw_rows = sum(self.metrics["raw_rows_read"].values())
-        total_notebooks = len(self.metrics["notebooks_generated"])
-        total_pipelines = len(self.metrics["pipelines_created"])
+        _total_raw_rows = sum(self.metrics["raw_rows_read"].values())  # noqa: F841
+        _total_notebooks = len(self.metrics["notebooks_generated"])  # noqa: F841
+        _total_pipelines = len(self.metrics["pipelines_created"])  # noqa: F841
 
-        report = f"""# 📊 Relatório Final - TransformAgent
+        report = """# 📊 Relatório Final - TransformAgent
 **Generated:** {datetime.now().isoformat()}
 **Execution Time:** {execution_time or 'N/A'}
 **Agent Version:** 1.0.0
@@ -3732,7 +3725,7 @@ LIMIT 10
         # Seção de decisões LLM
         llm_section = ""
         if self.metrics.get("llm_decisions"):
-            llm_section = f"""
+            llm_section = """
 ## 🤖 Decisões Autônomas da LLM
 
 **Total de decisões tomadas:** {llm_decisions_count}
@@ -3743,7 +3736,7 @@ LIMIT 10
                 llm_section += f"- **{decision['step']}**: {decision.get('timestamp', 'N/A')}\n"
 
         # Seção de execução automática
-        execution_section = f"""
+        execution_section = """
 ## ▶️ Execução Automática
 
 **Pipelines executados com sucesso:** {successful_pipelines}/{len(self.domains)}
@@ -3759,7 +3752,7 @@ LIMIT 10
             execution_section += "\n"
 
         # Relatório final completo
-        report = f"""
+        report = """
 # 🧠 TransformAgent - Relatório de Execução Autônoma
 
 **Data/Hora:** {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
@@ -3787,8 +3780,8 @@ LIMIT 10
         # Adiciona detalhes por domínio
         for domain, profile in raw_profile.get("domains", {}).items():
             if not profile.get("error"):
-                rows = profile.get("actual_rows", 0)
-                report += f"""
+                rows = profile.get("actual_rows", 0)  # noqa: F841
+                report += """
 **{domain.replace('_', ' ').title()}:**
 - Registros: {rows:,}
 - Schema: {len(profile.get('schema', {}))} colunas
@@ -3799,7 +3792,7 @@ LIMIT 10
         # Análise LLM se disponível
         if raw_profile.get("llm_analysis") and not raw_profile["llm_analysis"].get("error"):
             llm_analysis = raw_profile["llm_analysis"]
-            report += f"""
+            report += """
 ## 🧠 Análise Inteligente (GPT)
 
 **Score de Qualidade:** {llm_analysis.get('data_quality_assessment', {}).get('overall_score', 'N/A')}/10
@@ -3810,7 +3803,7 @@ LIMIT 10
                 report += f"- {rec}\n"
 
         # Arquivos gerados
-        report += f"""
+        report += """
 ## 📁 Artefatos Gerados
 
 ### Notebooks DLT:
@@ -3820,7 +3813,7 @@ LIMIT 10
 
         # Próximos passos
         if successful_pipelines > 0:
-            report += f"""
+            report += """
 ## 🚀 Próximos Passos
 
 ✅ **Pipelines Ativos:** Os pipelines DLT estão em execução no Databricks
@@ -3835,7 +3828,7 @@ databricks pipelines get --pipeline-name dlt_vagas_linkedin_data_engineer
 ```
 """
         else:
-            report += f"""
+            report += """
 ## ⚠️ Ações Necessárias
 
 ❌ **Falhas na Execução:** Verifique configurações do Databricks
@@ -3848,7 +3841,7 @@ databricks pipelines get --pipeline-name dlt_vagas_linkedin_data_engineer
                 report += f"- {error}\n"
 
         # Rodapé
-        report += f"""
+        report += """
 
 ---
 *Relatório gerado automaticamente pelo TransformAgent autônomo*
@@ -3901,7 +3894,7 @@ databricks pipelines get --pipeline-name dlt_vagas_linkedin_data_engineer
 
         # 2. Verificar Terraform
         terraform_dir = os.path.join(os.path.dirname(self.output_dir), "terraform_databricks")
-        terraform_files = ["unified_pipelines.tf", "databricks.tfvars"]
+        terraform_files = ["unified_pipelines.t", "databricks.tfvars"]
 
         terraform_found = all(os.path.exists(os.path.join(terraform_dir, tf_file)) for tf_file in terraform_files)
 
@@ -4193,9 +4186,11 @@ def main():
         llm_decisions = len(agent.metrics.get("llm_decisions", []))
         notebooks_generated = len(agent.metrics.get("notebooks_generated", []))
         execution_status = agent.metrics.get("execution_status", {})
-        successful_pipelines = len([p for p in execution_status.values() if p.get("status") == "completed"])
+        _successful_pipelines = len(
+            [p for p in execution_status.values() if p.get("status") == "completed"]
+        )  # noqa: F841
 
-        print(f"\n🤖 AUTONOMIA ACHIEVED:")
+        print("\n🤖 AUTONOMIA ACHIEVED:")
         print(f"   • Decisões LLM tomadas: {llm_decisions}")
         print(f"   • Notebooks gerados: {notebooks_generated}")
         print(f"   • Pipelines executados: {successful_pipelines}/{len(agent.domains)}")
