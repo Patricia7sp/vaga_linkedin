@@ -14,6 +14,7 @@ O novo `production_agent_cloud.py` cuida apenas da extração.
 import os
 import sys
 import time
+import threading
 from datetime import datetime
 from typing import Dict, List, Any, Optional
 
