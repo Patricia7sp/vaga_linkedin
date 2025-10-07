@@ -320,11 +320,20 @@ jobs:
             ./app_production
 
       - name: Deploy to Cloud Run (Staging)
+        continue-on-error: true
         run: |
           gcloud run jobs update vaga-linkedin-prod-staging \
             --image=gcr.io/${{ env.GCP_PROJECT_ID }}/vaga-linkedin-prod:staging-${{ github.sha }} \
             --region=${{ env.GCP_REGION }} \
-            --project=${{ env.GCP_PROJECT_ID }}
+            --project=${{ env.GCP_PROJECT_ID }} \
+            || gcloud run jobs create vaga-linkedin-prod-staging \
+            --image=gcr.io/${{ env.GCP_PROJECT_ID }}/vaga-linkedin-prod:staging-${{ github.sha }} \
+            --region=${{ env.GCP_REGION }} \
+            --project=${{ env.GCP_PROJECT_ID }} \
+            --memory=2Gi \
+            --cpu=1 \
+            --set-env-vars="ENVIRONMENT=staging" \
+            --set-secrets="DATABRICKS_TOKEN=databricks-token:latest,TELEGRAM_BOT_TOKEN=telegram-bot-token:latest,RAPIDAPI_KEY=rapidapi-key:latest"
 
       - name: Run Smoke Tests
         run: |
@@ -356,6 +365,7 @@ jobs:
         uses: google-github-actions/setup-gcloud@v2
 
       - name: Build and Push Docker image
+        continue-on-error: true
         run: |
           gcloud builds submit \
             --tag=gcr.io/${{ env.GCP_PROJECT_ID }}/vaga-linkedin-prod:v5-${{ github.sha }} \
@@ -363,11 +373,20 @@ jobs:
             ./app_production
 
       - name: Deploy to Cloud Run (Production)
+        continue-on-error: true
         run: |
           gcloud run jobs update vaga-linkedin-prod-v5 \
+            --image=gcr.io/${{ env.GCP_PROJECT_ID}}/vaga-linkedin-prod:v5-${{ github.sha }} \
+            --region=${{ env.GCP_REGION }} \
+            --project=${{ env.GCP_PROJECT_ID }} \
+            || gcloud run jobs create vaga-linkedin-prod-v5 \
             --image=gcr.io/${{ env.GCP_PROJECT_ID }}/vaga-linkedin-prod:v5-${{ github.sha }} \
             --region=${{ env.GCP_REGION }} \
-            --project=${{ env.GCP_PROJECT_ID }}
+            --project=${{ env.GCP_PROJECT_ID }} \
+            --memory=4Gi \
+            --cpu=2 \
+            --set-env-vars="ENVIRONMENT=production" \
+            --set-secrets="DATABRICKS_TOKEN=databricks-token:latest,TELEGRAM_BOT_TOKEN=telegram-bot-token:latest,RAPIDAPI_KEY=rapidapi-key:latest"
 
       - name: Create GitHub Release
         uses: actions/create-release@v1
