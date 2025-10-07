@@ -17,12 +17,12 @@ resource "github_branch_protection" "main" {
   repository_id = github_repository.vaga_linkedin.node_id
   pattern       = "main"
 
-  enforce_admins = false
-  allows_deletions = false
+  enforce_admins      = false
+  allows_deletions    = false
   allows_force_pushes = false
 
   required_status_checks {
-    strict = true
+    strict   = true
     contexts = ["ci"]
   }
 
@@ -32,10 +32,10 @@ resource "github_branch_protection" "main" {
 }
 
 resource "github_repository_file" "readme" {
-  repository = github_repository.vaga_linkedin.name
-  branch     = "main"
-  file       = "README.md"
-  content    = file("../Readme.md")
+  repository          = github_repository.vaga_linkedin.name
+  branch              = "main"
+  file                = "README.md"
+  content             = file("../Readme.md")
   overwrite_on_create = true
 }
 

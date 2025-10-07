@@ -31,31 +31,31 @@ provider "google" {
 # DLT Pipelines for each domain - using serverless compute
 resource "databricks_pipeline" "vagas_linkedin_dlt" {
   for_each = toset(var.domains)
-  
+
   name    = "dlt_vagas_linkedin_${each.key}"
   catalog = data.databricks_catalog.vagas_linkedin.name
-  
+
   configuration = {
     "pipelines.autoOptimize.managed"    = "true"
     "pipelines.autoOptimize.zOrderCols" = "extract_date"
-    "pipelines.trigger.availableNow"   = "true"
+    "pipelines.trigger.availableNow"    = "true"
   }
-  
+
   # Use serverless compute (required in this workspace)
   serverless = true
-  
+
   library {
     notebook {
       path = "/Shared/${each.key}_dlt_transformation"
     }
   }
-  
+
   # Target deve ser somente o nome do schema (catalog já definido acima)
   # Exemplo: data_engineer_dlt
   target      = "${each.key}_dlt"
   continuous  = false
   development = false
-  
+
   depends_on = [
     databricks_notebook.dlt_notebooks
   ]
@@ -107,7 +107,7 @@ data "databricks_schema" "gold_schemas" {
 # Reference existing Unity Catalog volumes
 data "databricks_volume" "linkedin_data_volumes" {
   for_each = toset(var.domains)
-  
+
   name = "${data.databricks_catalog.vagas_linkedin.name}.${each.key}_raw.linkedin_data_volume"
 }
 
@@ -138,13 +138,13 @@ resource "databricks_grants" "dlt_schema_admin" {
 # Grant READ/WRITE VOLUME permissions
 resource "databricks_grants" "volume_admin" {
   for_each = toset(var.domains)
-  
+
   volume = "${data.databricks_catalog.vagas_linkedin.name}.${each.key}_raw.linkedin_data_volume"
   grant {
     principal  = var.current_user_email
     privileges = ["READ_VOLUME", "WRITE_VOLUME"]
   }
-  
+
   depends_on = [data.databricks_volume.linkedin_data_volumes]
 }
 
@@ -164,10 +164,10 @@ resource "databricks_grants" "volume_admin" {
 # Upload DLT notebooks to Databricks workspace
 resource "databricks_notebook" "dlt_notebooks" {
   for_each = toset(var.domains)
-  
+
   path     = "/Shared/${each.key}_dlt_transformation"
   language = "PYTHON"
-  
+
   # Use content_base64 for force re-upload when content changes
   content_base64 = filebase64("../transform_output/dlt_${each.key}_transformation.py")
 }
@@ -176,7 +176,7 @@ resource "databricks_notebook" "dlt_notebooks" {
 output "pipeline_ids" {
   description = "DLT Pipeline IDs"
   value = {
-    for domain, pipeline in databricks_pipeline.vagas_linkedin_dlt : 
+    for domain, pipeline in databricks_pipeline.vagas_linkedin_dlt :
     domain => pipeline.id
   }
 }
@@ -184,7 +184,7 @@ output "pipeline_ids" {
 output "pipeline_urls" {
   description = "DLT Pipeline URLs"
   value = {
-    for domain, pipeline in databricks_pipeline.vagas_linkedin_dlt : 
+    for domain, pipeline in databricks_pipeline.vagas_linkedin_dlt :
     domain => pipeline.url
   }
 }
@@ -210,9 +210,9 @@ output "unity_catalog_info" {
 output "gcp_service_account_info" {
   description = "GCP Service Account for Databricks (manually managed)"
   value = {
-    email = "databricks-dlt-service@vaga-linkedin.iam.gserviceaccount.com"
+    email    = "databricks-dlt-service@vaga-linkedin.iam.gserviceaccount.com"
     key_file = "../databricks-sa-key.json"
-    roles = ["roles/storage.admin", "roles/bigquery.dataEditor", "roles/bigquery.jobUser"]
+    roles    = ["roles/storage.admin", "roles/bigquery.dataEditor", "roles/bigquery.jobUser"]
   }
 }
 
@@ -220,7 +220,7 @@ output "gcp_setup_instructions" {
   description = "Instructions to enable required GCP APIs"
   value = {
     cloud_resource_manager_api = "https://console.developers.google.com/apis/api/cloudresourcemanager.googleapis.com/overview?project=${var.gcp_project_id}"
-    service_usage_api = "https://console.developers.google.com/apis/api/serviceusage.googleapis.com/overview?project=${var.gcp_project_id}"
-    iam_api = "https://console.developers.google.com/apis/api/iam.googleapis.com/overview?project=${var.gcp_project_id}"
+    service_usage_api          = "https://console.developers.google.com/apis/api/serviceusage.googleapis.com/overview?project=${var.gcp_project_id}"
+    iam_api                    = "https://console.developers.google.com/apis/api/iam.googleapis.com/overview?project=${var.gcp_project_id}"
   }
 }

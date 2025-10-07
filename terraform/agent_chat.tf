@@ -45,15 +45,15 @@ resource "databricks_job" "linkedin_pipeline_v4" {
 
   # Tarefa 1: Executar Pipeline DLT (Bronze → Silver → Gold)
   task {
-    task_key = "dlt-pipeline-execution"
-    timeout_seconds = 3600
-    max_retries = 1
+    task_key                  = "dlt-pipeline-execution"
+    timeout_seconds           = 3600
+    max_retries               = 1
     min_retry_interval_millis = 60000
 
     notebook_task {
       notebook_path = "/Shared/linkedin_pipeline_runner_notebook"
       base_parameters = {
-        "mode" = "transform"
+        "mode"        = "transform"
         "environment" = "production"
       }
     }
@@ -65,14 +65,14 @@ resource "databricks_job" "linkedin_pipeline_v4" {
     depends_on {
       task_key = "dlt-pipeline-execution"
     }
-    timeout_seconds = 1800
-    max_retries = 2
+    timeout_seconds           = 1800
+    max_retries               = 2
     min_retry_interval_millis = 30000
 
     notebook_task {
       notebook_path = "/Shared/linkedin_pipeline_runner_notebook"
       base_parameters = {
-        "mode" = "chat"
+        "mode"     = "chat"
         "telegram" = "enabled"
       }
     }
@@ -81,11 +81,11 @@ resource "databricks_job" "linkedin_pipeline_v4" {
   # Agendamento: 08h30, 12h30, 21h30 (seg-sex)
   schedule {
     quartz_cron_expression = "0 30 8,12,21 ? * MON-FRI"
-    timezone_id = "America/Sao_Paulo"
-    pause_status = "UNPAUSED"
+    timezone_id            = "America/Sao_Paulo"
+    pause_status           = "UNPAUSED"
   }
 
-  timeout_seconds = 14400  # 4 horas total
+  timeout_seconds     = 14400 # 4 horas total
   max_concurrent_runs = 1
 
   email_notifications {
@@ -95,9 +95,9 @@ resource "databricks_job" "linkedin_pipeline_v4" {
 
   tags = {
     "environment" = var.environment
-    "project" = "vaga_linkedin"
-    "pipeline" = "v4"
-    "component" = "extraction_transformation"
+    "project"     = "vaga_linkedin"
+    "pipeline"    = "v4"
+    "component"   = "extraction_transformation"
   }
 }
 

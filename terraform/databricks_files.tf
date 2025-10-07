@@ -10,5 +10,5 @@
 # Output path para referência
 output "python_runner_path" {
   description = "Path do script consolidado no workspace (upload manual)"
-  value = "/Shared/linkedin_pipeline_runner.py"
+  value       = "/Shared/linkedin_pipeline_runner.py"
 }
