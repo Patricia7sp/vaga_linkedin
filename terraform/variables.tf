@@ -104,6 +104,12 @@ variable "current_user_email" {
   type        = string
 }
 
+variable "gcp_service_account_email" {
+  description = "GCP service account email for CI/CD deployments"
+  type        = string
+  default     = "linkedin-scraper@vaga-linkedin.iam.gserviceaccount.com"
+}
+
 variable "catalog_name" {
   description = "Unity Catalog name"
   type        = string
