@@ -7,7 +7,6 @@ import sys
 from typing import Any, Dict
 
 
-
 class DLTSimulator:
     """Simula execução local de notebooks DLT para validação prévia"""
 
