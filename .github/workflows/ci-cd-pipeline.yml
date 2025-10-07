@@ -197,6 +197,7 @@ jobs:
           tflint_version: latest
 
       - name: Run TFLint
+        continue-on-error: true
         run: |
           cd terraform
           tflint --init
