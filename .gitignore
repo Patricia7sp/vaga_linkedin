@@ -67,8 +67,9 @@ extract_agent/extract_agent.md
 load_agent/load_agent.md
 transform_agent/transform_agent.md
 viz_agent/viz_agent.md
-test_*
 
+# Ignore test files in root but not in tests/ directory
+/test_*
 
 # Data files
 data/
