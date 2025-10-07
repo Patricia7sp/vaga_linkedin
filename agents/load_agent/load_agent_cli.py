@@ -44,7 +44,7 @@ def test_gcs_connectivity():
 
         return True, len(json_files), json_files[:10]  # Return first 10 for display
 
-    except Exception as e:
+    except Exception:
         return False, 0, []
 
 
@@ -67,7 +67,7 @@ def download_gcs_data():
             os.makedirs(temp_dir, exist_ok=True)
 
             # Download JSON files for this domain
-            pattern = f"data_extracts/*/{domain}/*.json"
+            f"data_extracts/*/{domain}/*.json"
             blobs = bucket.list_blobs(prefix=f"data_extracts/")
             domain_blobs = [b for b in blobs if domain in b.name and b.name.endswith(".json")]
 
@@ -648,10 +648,9 @@ def run_load_agent_cli(instructions=None):
             print(f"📂 Exemplos: {sample_files[:3]}")
 
             # Download GCS data
-            gcs_data = download_gcs_data()
+            download_gcs_data()
         else:
             print("💾 Usando dados locais apenas")
-            gcs_data = {}
 
         # Step 2: Create Unity Catalog via CLI
         databricks_host = os.getenv("DATABRICKS_SERVER_HOSTNAME")

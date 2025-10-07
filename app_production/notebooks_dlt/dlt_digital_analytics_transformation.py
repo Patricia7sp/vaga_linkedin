@@ -5,10 +5,8 @@ from pyspark.sql.functions import (
     col,
     current_timestamp,
     expr,
-    input_file_name,
     lit,
     lower,
-    regexp_extract,
 )
 from pyspark.sql.functions import regexp_replace
 from pyspark.sql.functions import regexp_replace as re_replace

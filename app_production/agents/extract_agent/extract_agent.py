@@ -7,11 +7,9 @@ Suporte opcional ao Kafka foi desabilitado por padrão para reduzir custos.
 import json
 import os
 import subprocess
-import threading
 import time
 from datetime import datetime, timedelta
 
-import requests
 from dotenv import load_dotenv
 
 try:
@@ -64,8 +62,6 @@ import random
 from datetime import datetime
 
 from selenium import webdriver
-from selenium.webdriver.chrome.options import Options
-from selenium.webdriver.common.action_chains import ActionChains
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
@@ -79,7 +75,6 @@ except ImportError:
     print("⚠️ Google Cloud Storage não disponível")
     GCP_AVAILABLE = False
 import tempfile
-import uuid
 from urllib.parse import quote
 
 from bs4 import BeautifulSoup
@@ -677,7 +672,7 @@ def extract_jobs_via_linkedin_scraping(search_term, max_results=50, category=Non
                         print(f"✅ Encontrados {len(job_cards)} elementos com seletor: {selector}")
                         break
 
-                except Exception as e:
+                except Exception:
                     # Try scrolling to load more content
                     try:
                         driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
@@ -800,7 +795,7 @@ def extract_jobs_via_linkedin_scraping(search_term, max_results=50, category=Non
                             job_title = job_title.strip()
                             break
 
-                    except Exception as e:
+                    except Exception:
                         continue
 
                 if not job_title:
@@ -1033,7 +1028,7 @@ def extract_jobs_via_linkedin_scraping(search_term, max_results=50, category=Non
                             if len(cards) <= card_index:
                                 break  # Exit if we can't find our position
 
-                except Exception as e:
+                except Exception:
                     # If navigation fails, return to search page
                     try:
                         driver.get(current_url)
@@ -1833,7 +1828,6 @@ def run_extract(instructions=None):
             return run_extract_offline()
 
         # Step 4: Extract and produce job data
-        results = {}
 
         # Create data directory
         data_dir = "data_extracts"
@@ -1890,7 +1884,6 @@ def run_extract(instructions=None):
 
             # Validate required fields as per extract_agente.md
             valid_jobs = []
-            required_fields = ["job_title", "company_name", "location", "posted_date", "job_url", "description_snippet"]
 
             for job in unique_jobs:
                 # Required validation: must have essential fields

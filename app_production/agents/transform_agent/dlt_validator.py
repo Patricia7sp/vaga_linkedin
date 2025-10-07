@@ -3,10 +3,8 @@ DLT Pipeline Validator
 Validates Delta Live Tables notebooks before execution
 """
 
-import ast
-import json
 import re
-from typing import Dict, List, Tuple
+from typing import Dict
 
 
 class DLTValidator:

@@ -17,12 +17,10 @@ import subprocess
 import sys
 import time
 from datetime import datetime
-from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 import yaml
 
-from .dlt_validator import DLTValidator
 
 # Imports para Google Cloud Secret Manager
 try:
@@ -100,7 +98,6 @@ load_secret_manager_config()
 
 # Imports para LLM Integration
 try:
-    import openai
     from openai import OpenAI
 
     OPENAI_AVAILABLE = True
@@ -111,8 +108,6 @@ except ImportError:
 # Imports para Databricks
 try:
     import dlt
-    import pyspark
-    from dlt import expect, expect_all, table, view
     from pyspark.sql import SparkSession
     from pyspark.sql.functions import *
     from pyspark.sql.types import *
@@ -180,7 +175,6 @@ except ImportError:
 # Imports para Databricks API
 try:
     from databricks.sdk import WorkspaceClient
-    from databricks.sdk.service import jobs, pipelines
 
     DATABRICKS_SDK_AVAILABLE = True
 except ImportError:
@@ -1011,7 +1005,7 @@ Se encontrar ambiguidades, assuma padrões de mercado e explique sua decisão no
             update = self.databricks_client.pipelines.start_update(pipeline_id=pipeline_id, full_refresh=True)
 
             # 6. Monitoramento em tempo real
-            execution_result = self._monitor_pipeline_execution(pipeline_id, domain, update.update_id)
+            self._monitor_pipeline_execution(pipeline_id, domain, update.update_id)
             result["execution_id"] = update_response.update_id
 
             logger.info(f"✅ Pipeline {domain} iniciado - Update ID: {update_response.update_id}")
@@ -2594,8 +2588,8 @@ Retorne APENAS código Python válido, sem markdown.
             String com código do notebook DLT
         """
         raw_table = self.raw_tables[domain]
-        bronze_table = f"{self.catalog_name}.{domain}_bronze.jobs_bronze"
-        silver_table = f"{self.catalog_name}.{domain}_silver.jobs_silver"
+        f"{self.catalog_name}.{domain}_bronze.jobs_bronze"
+        f"{self.catalog_name}.{domain}_silver.jobs_silver"
 
         notebook = f'''"""
 Delta Live Tables Pipeline - {domain.title().replace('_', ' ')}
@@ -3471,7 +3465,7 @@ echo "📞 Em caso de dúvidas, consulte: databricks pipelines --help"
             else 0
         )
 
-        llm_decisions_count = len(self.metrics.get("llm_decisions", []))
+        len(self.metrics.get("llm_decisions", []))
         successful_pipelines = len(
             [p for p in execution_results.get("execution_status", {}).values() if p.get("status") == "completed"]
         )

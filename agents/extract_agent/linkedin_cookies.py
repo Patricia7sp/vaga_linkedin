@@ -2,7 +2,6 @@
 LinkedIn Cookie Manager for persistent sessions
 """
 
-import os
 import pickle
 from pathlib import Path
 

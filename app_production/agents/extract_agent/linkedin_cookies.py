@@ -2,11 +2,8 @@
 LinkedIn Cookie Manager for persistent sessions with GCS support
 """
 
-import json
-import os
 import pickle
 import subprocess
-import tempfile
 from pathlib import Path
 
 # GCP Storage

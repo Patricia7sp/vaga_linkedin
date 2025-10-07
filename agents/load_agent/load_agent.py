@@ -10,7 +10,6 @@ Responsible for:
 
 import json
 import os
-import sys
 from datetime import datetime
 
 from dotenv import load_dotenv
@@ -77,8 +76,7 @@ def test_gcs_connectivity_via_client():
 def download_gcs_data_to_local():
     """Download GCS data to local directory for Spark processing."""
     try:
-        import json
-        import tempfile
+        pass
 
         from google.cloud import storage
 
@@ -249,7 +247,6 @@ def create_spark_session_local():
     """Create PySpark session with local configuration (fallback)."""
     try:
         # Check if databricks-connect is interfering
-        import os
         import sys
 
         # Temporarily remove databricks-connect from path

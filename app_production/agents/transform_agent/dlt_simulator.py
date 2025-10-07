@@ -2,16 +2,10 @@
 DLT Pipeline Simulator - Testa notebooks localmente antes da execução no Databricks
 """
 
-import importlib.util
-import json
 import os
 import sys
-import tempfile
-import traceback
-from typing import Any, Dict, List
-from unittest.mock import MagicMock
+from typing import Any, Dict
 
-import pandas as pd
 
 
 class DLTSimulator:

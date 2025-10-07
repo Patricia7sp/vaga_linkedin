@@ -10,12 +10,12 @@ from typing import Dict, List
 
 # Import RapidAPI extractor
 try:
-    from .rapidapi_linkedin_extractor import RapidAPILinkedInExtractor, extract_jobs_via_rapidapi
+    from .rapidapi_linkedin_extractor import extract_jobs_via_rapidapi
 
     RAPIDAPI_AVAILABLE = True
 except ImportError:
     try:
-        from rapidapi_linkedin_extractor import RapidAPILinkedInExtractor, extract_jobs_via_rapidapi
+        from rapidapi_linkedin_extractor import extract_jobs_via_rapidapi
 
         RAPIDAPI_AVAILABLE = True
     except ImportError:
