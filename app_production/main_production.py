@@ -7,9 +7,9 @@ Responsável apenas por acionar o novo Production Agent Cloud,
 que executa exclusivamente o Extract Agent e envia os dados para o GCS/Kafka.
 """
 
+import argparse
 import os
 import sys
-import argparse
 from datetime import datetime
 
 # Adicionar path para imports

@@ -3,8 +3,8 @@
 Infra Agent: Provisions infrastructure using Terraform.
 """
 
-import subprocess
 import os
+import subprocess
 
 
 def run_infra(instructions=None):

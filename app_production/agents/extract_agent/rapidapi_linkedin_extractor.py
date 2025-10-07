@@ -6,11 +6,12 @@ Usa RapidAPI LinkedIn Job Search API para extração robusta sem bloqueios
 
 import json
 import os
-import requests
+import pathlib
 import time
 from datetime import datetime
-from typing import List, Dict, Optional
-import pathlib
+from typing import Dict, List, Optional
+
+import requests
 from dotenv import load_dotenv
 
 # Load environment variables

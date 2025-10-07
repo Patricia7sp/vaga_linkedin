@@ -3,13 +3,14 @@
 Viz Agent: Generates dashboards for data visualization.
 """
 
-import pandas as pd
-import matplotlib.pyplot as plt
-import seaborn as sns
-import os
 import glob
+import os
 import subprocess
 from datetime import datetime
+
+import matplotlib.pyplot as plt
+import pandas as pd
+import seaborn as sns
 
 
 def run_viz(instructions=None):

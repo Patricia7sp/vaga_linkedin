@@ -24,15 +24,14 @@ import argparse
 import json
 import logging
 import os
-from pathlib import Path
 import time
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from logging import Logger
+from pathlib import Path
 from typing import Dict, Iterable, List, Optional
 
 import requests
-
 
 # ---------------------------------------------------------------------------
 # Utilidades compartilhadas

@@ -6,28 +6,22 @@ Extracts job data from APIs and processes them through Kafka streaming to GCP.
 
 import json
 import os
+import random
 import subprocess
-import requests
-import time
-from datetime import datetime
-from dotenv import load_dotenv
 import threading
-from kafka import KafkaProducer, KafkaConsumer
-from kafka.admin import KafkaAdminClient, NewTopic
-import json
-import random
-import subprocess
 import time
-import json
-import os
-import random
 from datetime import datetime
+
+import requests
+from dotenv import load_dotenv
+from kafka import KafkaConsumer, KafkaProducer
+from kafka.admin import KafkaAdminClient, NewTopic
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
-from selenium.webdriver.common.by import By
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.action_chains import ActionChains
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.support.ui import WebDriverWait
 
 # GCP Storage
 try:
@@ -37,11 +31,13 @@ try:
 except ImportError:
     print("⚠️ Google Cloud Storage não disponível")
     GCP_AVAILABLE = False
-from urllib.parse import quote
 import tempfile
 import uuid
-from .linkedin_cookies import LinkedInCookieManager
+from urllib.parse import quote
+
 from bs4 import BeautifulSoup
+
+from .linkedin_cookies import LinkedInCookieManager
 
 
 # Spark imports will be loaded only when needed
@@ -51,8 +47,8 @@ def _import_spark():
 
     findspark.init()
     from pyspark.sql import SparkSession
-    from pyspark.sql.functions import from_json, col, current_timestamp
-    from pyspark.sql.types import StructType, StructField, StringType, IntegerType, BooleanType, ArrayType
+    from pyspark.sql.functions import col, current_timestamp, from_json
+    from pyspark.sql.types import ArrayType, BooleanType, IntegerType, StringType, StructField, StructType
 
     return (
         SparkSession,

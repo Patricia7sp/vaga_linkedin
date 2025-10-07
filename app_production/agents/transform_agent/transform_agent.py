@@ -10,16 +10,18 @@ ENTRADA: tabelas RAW no catálogo `vagas_linkedin` (schemas `*_raw`)
 SAÍDA: tabelas Delta nas camadas `*_bronze`, `*_silver`, `*_gold`
 """
 
-import os
-import sys
 import json
 import logging
-import time
+import os
 import subprocess
+import sys
+import time
 from datetime import datetime
-from typing import Dict, List, Any, Optional
 from pathlib import Path
+from typing import Any, Dict, List, Optional
+
 import yaml
+
 from .dlt_validator import DLTValidator
 
 # Imports para Google Cloud Secret Manager
@@ -108,12 +110,12 @@ except ImportError:
 
 # Imports para Databricks
 try:
+    import dlt
     import pyspark
+    from dlt import expect, expect_all, table, view
     from pyspark.sql import SparkSession
     from pyspark.sql.functions import *
     from pyspark.sql.types import *
-    import dlt
-    from dlt import table, view, expect, expect_all
 
     PYSPARK_AVAILABLE = True
 except ImportError:
@@ -1397,11 +1399,11 @@ Se encontrar ambiguidades, assuma padrões de mercado e explique sua decisão no
         """
         try:
             import smtplib
+            from email import encoders
+            from email.mime.base import MIMEBase
+            from email.mime.image import MIMEImage
             from email.mime.multipart import MIMEMultipart
             from email.mime.text import MIMEText
-            from email.mime.base import MIMEBase
-            from email import encoders
-            from email.mime.image import MIMEImage
 
             host = os.getenv("EMAIL_HOST", "smtp.gmail.com")
             port = int(os.getenv("EMAIL_PORT", "587"))
@@ -1518,8 +1520,8 @@ Se encontrar ambiguidades, assuma padrões de mercado e explique sua decisão no
             pdf_path = os.path.join(os.path.dirname(self.output_dir), "notebooks", "quality_dashboard.pdf")
             try:
                 from reportlab.lib.pagesizes import A4
-                from reportlab.pdfgen import canvas
                 from reportlab.lib.units import cm
+                from reportlab.pdfgen import canvas
 
                 c = canvas.Canvas(pdf_path, pagesize=A4)
                 width, height = A4
@@ -1643,6 +1645,7 @@ Se encontrar ambiguidades, assuma padrões de mercado e explique sua decisão no
         Retorna lista de caminhos das imagens geradas.
         """
         import os
+
         import matplotlib.pyplot as plt
 
         charts: List[str] = []

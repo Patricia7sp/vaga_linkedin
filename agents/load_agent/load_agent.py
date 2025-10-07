@@ -8,10 +8,11 @@ Responsible for:
 4. NO data transformation (that's transform_agent responsibility)
 """
 
+import json
 import os
 import sys
-import json
 from datetime import datetime
+
 from dotenv import load_dotenv
 
 # Load environment variables
@@ -41,7 +42,7 @@ def _import_spark():
     try:
         from pyspark.sql import SparkSession
         from pyspark.sql.functions import col, current_timestamp
-        from pyspark.sql.types import StructType, StructField, StringType, IntegerType, BooleanType
+        from pyspark.sql.types import BooleanType, IntegerType, StringType, StructField, StructType
 
         return SparkSession, col, current_timestamp, StructType, StructField, StringType, IntegerType, BooleanType
     except ImportError as e:
@@ -76,9 +77,10 @@ def test_gcs_connectivity_via_client():
 def download_gcs_data_to_local():
     """Download GCS data to local directory for Spark processing."""
     try:
-        from google.cloud import storage
         import json
         import tempfile
+
+        from google.cloud import storage
 
         print("📥 Baixando dados do GCS para processamento local...")
 

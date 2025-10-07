@@ -3,11 +3,12 @@
 Load Agent - Unity Catalog via CLI puro (sem PySpark)
 Versão otimizada usando apenas Databricks CLI e JSON direto
 """
-import os
-import json
-import subprocess
 import glob
+import json
+import os
+import subprocess
 from datetime import datetime
+
 from dotenv import load_dotenv
 
 # Load environment variables

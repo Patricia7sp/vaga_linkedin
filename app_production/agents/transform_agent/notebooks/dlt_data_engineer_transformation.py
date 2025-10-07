@@ -1,20 +1,22 @@
 # Databricks notebook source
 import dlt
 from pyspark.sql.functions import (
+    coalesce,
     col,
     current_timestamp,
+    expr,
+    input_file_name,
+    lit,
+    lower,
     regexp_extract,
+)
+from pyspark.sql.functions import regexp_replace
+from pyspark.sql.functions import regexp_replace as re_replace
+from pyspark.sql.functions import (
+    split,
     to_timestamp,
     trim,
-    lower,
-    regexp_replace,
-    split,
-    expr,
-    regexp_replace as re_replace,
-    lit,
-    input_file_name,
     when,
-    coalesce,
 )
 from pyspark.sql.types import *
 

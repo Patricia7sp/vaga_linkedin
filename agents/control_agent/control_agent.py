@@ -4,14 +4,14 @@ Control Agent for Vagas LinkedIn Project.
 Orchestrates the execution of the pipeline with user approval at each step.
 """
 
-import sys
 import os
+import sys
 
 # Add parent directory to path for imports
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from infra_agent.infra_agent import run_infra
 from extract_agent.extract_agent import run_extract
+from infra_agent.infra_agent import run_infra
 from load_agent.load_agent_cli import run_load
 from transform_agent.transform_agent import run_transform
 from viz_agent.viz_agent import run_viz

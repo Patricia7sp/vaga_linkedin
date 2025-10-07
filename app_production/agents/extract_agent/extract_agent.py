@@ -7,11 +7,12 @@ Suporte opcional ao Kafka foi desabilitado por padrão para reduzir custos.
 import json
 import os
 import subprocess
-import requests
+import threading
 import time
 from datetime import datetime, timedelta
+
+import requests
 from dotenv import load_dotenv
-import threading
 
 try:
     from kafka import KafkaProducer
@@ -25,8 +26,8 @@ except ImportError:
     KafkaAdminClient = None  # type: ignore
     NewTopic = None  # type: ignore
     NoBrokersAvailable = Exception  # type: ignore
-import random
 import base64
+import random
 
 # Import Google Cloud Secret Manager
 try:
@@ -61,12 +62,13 @@ import json
 import os
 import random
 from datetime import datetime
+
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
-from selenium.webdriver.common.by import By
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.action_chains import ActionChains
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.support.ui import WebDriverWait
 
 # GCP Storage
 try:
@@ -76,11 +78,13 @@ try:
 except ImportError:
     print("⚠️ Google Cloud Storage não disponível")
     GCP_AVAILABLE = False
-from urllib.parse import quote
 import tempfile
 import uuid
-from .linkedin_cookies import LinkedInCookieManager
+from urllib.parse import quote
+
 from bs4 import BeautifulSoup
+
+from .linkedin_cookies import LinkedInCookieManager
 
 # Import RapidAPI Hybrid Extractor (RapidAPI + Selenium fallback)
 try:
@@ -100,8 +104,8 @@ def _import_spark():
 
     findspark.init()
     from pyspark.sql import SparkSession
-    from pyspark.sql.functions import from_json, col, current_timestamp
-    from pyspark.sql.types import StructType, StructField, StringType, IntegerType, BooleanType, ArrayType
+    from pyspark.sql.functions import col, current_timestamp, from_json
+    from pyspark.sql.types import ArrayType, BooleanType, IntegerType, StringType, StructField, StructType
 
     return (
         SparkSession,
@@ -534,8 +538,8 @@ def linkedin_login(driver, max_retries=3):
             # ENHANCED: Fill login form with better selectors
             try:
                 # Wait for login form to load
-                from selenium.webdriver.support.ui import WebDriverWait
                 from selenium.webdriver.support import expected_conditions as EC
+                from selenium.webdriver.support.ui import WebDriverWait
 
                 wait = WebDriverWait(driver, 15)
 

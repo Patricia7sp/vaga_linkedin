@@ -5,8 +5,8 @@ Garante 100% de extração mesmo se quota RapidAPI acabar
 """
 
 import os
-from typing import List, Dict
 from datetime import datetime
+from typing import Dict, List
 
 # Import RapidAPI extractor
 try:

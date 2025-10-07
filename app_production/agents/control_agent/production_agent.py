@@ -13,10 +13,10 @@ O novo `production_agent_cloud.py` cuida apenas da extração.
 
 import os
 import sys
-import time
 import threading
+import time
 from datetime import datetime
-from typing import Dict, List, Any, Optional
+from typing import Any, Dict, List, Optional
 
 # Adicionar path para importar agentes
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
