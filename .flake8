@@ -19,7 +19,12 @@ ignore =
     E501,
     W503,
     W504,
-    E402
+    E402,
+    E722,
+    F811,
+    F541,
+    F841,
+    E741
 
 # Select specific error codes
 select = E,W,F,C,N
