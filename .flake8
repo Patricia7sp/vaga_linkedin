@@ -26,7 +26,8 @@ ignore =
     F841,
     E741,
     F403,
-    F405
+    F405,
+    W291
 
 # Select specific error codes
 select = E,W,F,C,N
