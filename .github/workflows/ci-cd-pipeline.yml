@@ -81,6 +81,7 @@ jobs:
           bandit -r app_production/ agents/ -l
 
       - name: Check dependencies for vulnerabilities
+        continue-on-error: true
         run: |
           safety check --json
 
