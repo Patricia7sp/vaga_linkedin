@@ -72,16 +72,19 @@ WAREHOUSE_ID = os.getenv("DATABRICKS_WAREHOUSE_ID", "ab43ca87b28a5a1d")
 try:
     from pyspark.dbutils import DBUtils
     from pyspark.sql import SparkSession
+
     spark = SparkSession.builder.getOrCreate()
     dbutils = DBUtils(spark)
-    
+
     TELEGRAM_BOT_TOKEN = dbutils.secrets.get("vaga_linkedin_agent_chat", "telegram_bot_token")
     TELEGRAM_CHAT_ID = dbutils.secrets.get("vaga_linkedin_agent_chat", "telegram_chat_id")
     if not DATABRICKS_TOKEN:
         DATABRICKS_TOKEN = dbutils.secrets.get("vaga_linkedin_agent_chat", "databricks_pat")
-    
-    print(f"🔐 Secrets carregados do Databricks: BOT_TOKEN={'*' * 10 + TELEGRAM_BOT_TOKEN[-10:]}, CHAT_ID={TELEGRAM_CHAT_ID}")
-    
+
+    print(
+        f"🔐 Secrets carregados do Databricks: BOT_TOKEN={'*' * 10 + TELEGRAM_BOT_TOKEN[-10:]}, CHAT_ID={TELEGRAM_CHAT_ID}"
+    )
+
 except Exception as e:
     # Fallback para variáveis de ambiente locais
     TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
@@ -97,9 +100,7 @@ def _configure_logger() -> Logger:
 
     if not logger.handlers:
         handler = logging.StreamHandler()
-        formatter = logging.Formatter(
-            "%(asctime)s - %(levelname)s - %(name)s - %(message)s"
-        )
+        formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(name)s - %(message)s")
         handler.setFormatter(formatter)
         logger.addHandler(handler)
 
@@ -179,9 +180,7 @@ class DatabricksSQLClient:
         response = requests.post(self._statements_url(), headers=API_HEADERS, json=payload, timeout=60)
 
         if response.status_code != 200:
-            raise RuntimeError(
-                f"Falha ao executar SQL (status {response.status_code}): {response.text}"
-            )
+            raise RuntimeError(f"Falha ao executar SQL (status {response.status_code}): {response.text}")
 
         data = response.json()
         status = data.get("status", {}).get("state")
@@ -206,9 +205,7 @@ class DatabricksSQLClient:
             response = requests.get(self._statements_url(statement_id), headers=API_HEADERS, timeout=30)
 
             if response.status_code != 200:
-                raise RuntimeError(
-                    f"Erro ao consultar status ({response.status_code}): {response.text}"
-                )
+                raise RuntimeError(f"Erro ao consultar status ({response.status_code}): {response.text}")
 
             data = response.json()
             status = data.get("status", {}).get("state")
@@ -257,9 +254,7 @@ class TelegramMessenger:
             self.max_retries = max(1, int(retry_env))
         except ValueError:
             self.max_retries = 3
-            self.logger.warning(
-                "Valor inválido para AGENT_CHAT_SEND_RETRIES (%s). Usando 3.", retry_env
-            )
+            self.logger.warning("Valor inválido para AGENT_CHAT_SEND_RETRIES (%s). Usando 3.", retry_env)
 
     def send_message(self, body: str) -> None:
         if not self.bot_token or not self.chat_id:
@@ -366,7 +361,7 @@ class AgentChat:
                 work_modality STRING,
                 url STRING
             )
-            """
+            """,
         ]
 
         for statement in statements:
@@ -402,7 +397,7 @@ class AgentChat:
                 COUNT(*) AS total
             FROM {self.RESPONSES_TABLE}
             GROUP BY decision
-            """
+            """,
         ]
 
         for statement in view_statements:

@@ -41,7 +41,7 @@ import requests
 
 def _load_env_file(filename: str = ".env") -> None:
     """Carrega variáveis de ambiente de um arquivo ``.env`` (se existir)."""
-    
+
     try:
         # Tentar usar __file__ (funciona em scripts Python normais)
         env_path = Path(__file__).resolve().parent / filename
@@ -93,16 +93,19 @@ WAREHOUSE_ID = os.getenv("DATABRICKS_WAREHOUSE_ID", "ab43ca87b28a5a1d")
 try:
     from pyspark.dbutils import DBUtils
     from pyspark.sql import SparkSession
+
     spark = SparkSession.builder.getOrCreate()
     dbutils = DBUtils(spark)
-    
+
     TELEGRAM_BOT_TOKEN = _clean_secret(dbutils.secrets.get("vaga_linkedin_agent_chat", "telegram_bot_token"))
     TELEGRAM_CHAT_ID = _clean_secret(dbutils.secrets.get("vaga_linkedin_agent_chat", "telegram_chat_id"))
     if not DATABRICKS_TOKEN:
         DATABRICKS_TOKEN = dbutils.secrets.get("vaga_linkedin_agent_chat", "databricks_pat")
-    
-    print(f"🔐 Secrets carregados do Databricks: BOT_TOKEN={'*' * 10 + TELEGRAM_BOT_TOKEN[-10:] if TELEGRAM_BOT_TOKEN and len(TELEGRAM_BOT_TOKEN) > 10 else '[REDACTED]'}, CHAT_ID={TELEGRAM_CHAT_ID}")
-    
+
+    print(
+        f"🔐 Secrets carregados do Databricks: BOT_TOKEN={'*' * 10 + TELEGRAM_BOT_TOKEN[-10:] if TELEGRAM_BOT_TOKEN and len(TELEGRAM_BOT_TOKEN) > 10 else '[REDACTED]'}, CHAT_ID={TELEGRAM_CHAT_ID}"
+    )
+
 except Exception as e:
     # Fallback para variáveis de ambiente locais
     TELEGRAM_BOT_TOKEN = _clean_secret(os.getenv("TELEGRAM_BOT_TOKEN"))
@@ -118,9 +121,7 @@ def _configure_logger() -> Logger:
 
     if not logger.handlers:
         handler = logging.StreamHandler()
-        formatter = logging.Formatter(
-            "%(asctime)s - %(levelname)s - %(name)s - %(message)s"
-        )
+        formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(name)s - %(message)s")
         handler.setFormatter(formatter)
         logger.addHandler(handler)
 
@@ -200,9 +201,7 @@ class DatabricksSQLClient:
         response = requests.post(self._statements_url(), headers=API_HEADERS, json=payload, timeout=60)
 
         if response.status_code != 200:
-            raise RuntimeError(
-                f"Falha ao executar SQL (status {response.status_code}): {response.text}"
-            )
+            raise RuntimeError(f"Falha ao executar SQL (status {response.status_code}): {response.text}")
 
         data = response.json()
         status = data.get("status", {}).get("state")
@@ -227,9 +226,7 @@ class DatabricksSQLClient:
             response = requests.get(self._statements_url(statement_id), headers=API_HEADERS, timeout=30)
 
             if response.status_code != 200:
-                raise RuntimeError(
-                    f"Erro ao consultar status ({response.status_code}): {response.text}"
-                )
+                raise RuntimeError(f"Erro ao consultar status ({response.status_code}): {response.text}")
 
             data = response.json()
             status = data.get("status", {}).get("state")
@@ -278,38 +275,36 @@ class TelegramMessenger:
             self.max_retries = max(1, int(retry_env))
         except ValueError:
             self.max_retries = 3
-            self.logger.warning(
-                "Valor inválido para AGENT_CHAT_SEND_RETRIES (%s). Usando 3.", retry_env
-            )
-    
+            self.logger.warning("Valor inválido para AGENT_CHAT_SEND_RETRIES (%s). Usando 3.", retry_env)
+
     def _api(self, method: str) -> str:
         """Constrói URL da API do Telegram."""
         return self.API_URL_TEMPLATE.format(token=self.bot_token, method=method)
-    
+
     def healthcheck(self) -> None:
         """Valida conexão com Telegram via getMe e sendChatAction."""
         if not self.bot_token or not self.chat_id:
             self.logger.warning("Bot token ou chat_id não configurados. Pulando healthcheck.")
             return
-        
+
         # 1) getMe - valida token
         try:
             response = requests.get(self._api("getMe"), timeout=10)
             if response.status_code != 200 or not response.json().get("ok"):
                 raise RuntimeError(f"Telegram getMe falhou: {response.status_code} {response.text}")
-            
+
             bot_info = response.json()["result"]
             self.logger.info("✅ Bot conectado: @%s (ID: %s)", bot_info.get("username"), bot_info.get("id"))
         except Exception as e:
             raise RuntimeError(f"Healthcheck getMe falhou: {e}")
-        
+
         # 2) sendChatAction - valida chat_id e permissões
         try:
             payload = {"chat_id": self.chat_id, "action": "typing"}
             response = requests.post(self._api("sendChatAction"), json=payload, timeout=10)
             if response.status_code != 200 or not response.json().get("ok"):
                 raise RuntimeError(f"Telegram sendChatAction falhou: {response.status_code} {response.text}")
-            
+
             self.logger.info("✅ Chat ID %s validado com sucesso", self.chat_id)
         except Exception as e:
             raise RuntimeError(f"Healthcheck sendChatAction falhou: {e}")
@@ -419,7 +414,7 @@ class AgentChat:
                 work_modality STRING,
                 url STRING
             )
-            """
+            """,
         ]
 
         for statement in statements:
@@ -455,7 +450,7 @@ class AgentChat:
                 COUNT(*) AS total
             FROM {self.RESPONSES_TABLE}
             GROUP BY decision
-            """
+            """,
         ]
 
         for statement in view_statements:
@@ -467,7 +462,7 @@ class AgentChat:
     # --- Polling -------------------------------------------------------
     def run_polling_cycle(self) -> List[JobRecord]:
         self.ensure_tables()
-        
+
         # Healthcheck do Telegram antes de buscar vagas
         try:
             self.messenger.healthcheck()
@@ -493,14 +488,14 @@ class AgentChat:
 
         self.logger.info("%s nova(s) vaga(s) notificadas.", len(jobs))
         return jobs
-    
+
     def poll_and_notify(self) -> List[JobRecord]:
         """Alias para run_polling_cycle() - usado no notebook."""
         return self.run_polling_cycle()
 
     def _fetch_new_jobs(self, since: datetime) -> List[JobRecord]:
         since_literal = self._timestamp_literal(since)
-        
+
         # Query com filtro de job_id já enviados
         # IMPORTANTE: Usando ingestion_timestamp porque posted_time_ts vem NULL da API RapidAPI
         query = f"""
@@ -522,7 +517,7 @@ class AgentChat:
           )
         ORDER BY ingestion_timestamp ASC
         """
-        
+
         rows = self.sql.execute(query)
         return [JobRecord.from_row(row) for row in rows]
 
@@ -778,6 +773,7 @@ if __name__ == "__main__":
     # Verificar se estamos em ambiente Databricks
     try:
         from pyspark.dbutils import DBUtils
+
         # Estamos no Databricks - não executar main()
         print("ℹ️ Agent Chat carregado no Databricks - use AgentChat() diretamente")
     except ImportError:

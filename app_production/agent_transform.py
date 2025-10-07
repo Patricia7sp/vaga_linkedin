@@ -2,7 +2,7 @@
 """
 Databricks Job Entry Point: executa transformações e notificações.
 
-Este script é pensado para rodar como tarefa (Python Script) em um job 
+Este script é pensado para rodar como tarefa (Python Script) em um job
 no Databricks, acionando os pipelines DLT (Bronze → Silver → Gold) e, em
 seguida, o Agent Chat para avisar sobre vagas novas.
 """
@@ -17,8 +17,10 @@ if PROJECT_ROOT not in sys.path:
     sys.path.append(PROJECT_ROOT)
 
 from agents.control_agent.production_agent_databricks import run_databricks_pipeline
+
 try:
     from agents.agent_chat.agent_chat import AgentChat
+
     AGENT_CHAT_AVAILABLE = True
 except ImportError:
     AGENT_CHAT_AVAILABLE = False
@@ -51,7 +53,7 @@ def run_agent_chat():
     if not AGENT_CHAT_AVAILABLE:
         print("⚠️ Agent Chat não disponível. Pulando notificações.")
         return True
-    
+
     try:
         chat_agent = AgentChat()
         return chat_agent.send_pipeline_summary()

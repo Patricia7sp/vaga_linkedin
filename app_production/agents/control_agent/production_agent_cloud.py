@@ -20,6 +20,7 @@ from agents.extract_agent.extract_agent import run_extract
 
 try:
     from dotenv import load_dotenv
+
     load_dotenv()
     print("✅ Variáveis de ambiente carregadas do arquivo .env")
 except ImportError:
@@ -46,11 +47,11 @@ def run_cloud_pipeline() -> bool:
 
     step_start = datetime.now()
     result = run_extract_only()
-    
+
     # result pode ser dict ou string - tratar ambos os casos
     if isinstance(result, dict):
         # Se for dict, verificar se tem dados extraídos
-        success = any(v.get('count', 0) > 0 for v in result.values() if isinstance(v, dict))
+        success = any(v.get("count", 0) > 0 for v in result.values() if isinstance(v, dict))
     elif isinstance(result, str):
         # Se for string, verificar se não tem erro
         success = "erro" not in result.lower()

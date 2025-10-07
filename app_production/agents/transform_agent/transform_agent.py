@@ -3,7 +3,7 @@
 🧠 TransformAgent - Agente Autônomo com GPT-5 para Transformação de Dados LinkedIn
 
 Agente autônomo especialista em Databricks, PySpark, SQL e Delta Live Tables (DLT).
-Usa GPT-5 para tomar decisões autônomas sobre transformações de dados das tabelas RAW 
+Usa GPT-5 para tomar decisões autônomas sobre transformações de dados das tabelas RAW
 do catálogo `vagas_linkedin` nas camadas Bronze, Silver e Gold.
 
 ENTRADA: tabelas RAW no catálogo `vagas_linkedin` (schemas `*_raw`)
@@ -25,11 +25,13 @@ from .dlt_validator import DLTValidator
 # Imports para Google Cloud Secret Manager
 try:
     from google.cloud import secretmanager
+
     SECRET_MANAGER_AVAILABLE = True
     print("✅ Google Cloud Secret Manager disponível")
 except ImportError:
     print("⚠️  Google Cloud Secret Manager não disponível. Usando variáveis de ambiente.")
     SECRET_MANAGER_AVAILABLE = False
+
 
 def access_secret_version(secret_name):
     """
@@ -38,56 +40,58 @@ def access_secret_version(secret_name):
     try:
         if not SECRET_MANAGER_AVAILABLE:
             # Fallback para variáveis de ambiente
-            return os.getenv(secret_name.replace('-', '_').upper())
-            
+            return os.getenv(secret_name.replace("-", "_").upper())
+
         # Configuração do logging
         client = secretmanager.SecretManagerServiceClient()
         project_id = os.getenv("GCP_PROJECT") or "vaga-linkedin"
-        
+
         # A variável de ambiente GCP_PROJECT é preenchida automaticamente pelo ambiente Cloud Function
         name = f"projects/{project_id}/secrets/{secret_name}/versions/latest"
         response = client.access_secret_version(request={"name": name})
         payload = response.payload.data.decode("UTF-8")
         return payload
-        
+
     except Exception as e:
         print(f"❌ Erro ao acessar secret {secret_name}: {e}")
         # Fallback para variáveis de ambiente
-        return os.getenv(secret_name.replace('-', '_').upper())
+        return os.getenv(secret_name.replace("-", "_").upper())
+
 
 def load_secret_manager_config():
     """Carrega configurações do GCP Secret Manager"""
     try:
         print("🔐 Carregando credenciais do GCP Secret Manager...")
-        
+
         # Acessar secrets do Databricks
-        databricks_host = access_secret_version('databricks-host')
-        databricks_token = access_secret_version('databricks-token')
-        
+        databricks_host = access_secret_version("databricks-host")
+        databricks_token = access_secret_version("databricks-token")
+
         if databricks_host and databricks_token:
             # Definir variáveis de ambiente para uso posterior
-            os.environ['DATABRICKS_HOST'] = databricks_host
-            os.environ['DATABRICKS_TOKEN'] = databricks_token
+            os.environ["DATABRICKS_HOST"] = databricks_host
+            os.environ["DATABRICKS_TOKEN"] = databricks_token
             print("✅ Credenciais Databricks carregadas do Secret Manager")
             return True
         else:
             print("⚠️  Credenciais Databricks não encontradas - usando simulação")
             return False
-            
+
     except Exception as e:
         print(f"❌ Erro ao carregar do Secret Manager: {e}")
         print("🔄 Tentando usar variáveis de ambiente como fallback...")
-        
+
         # Fallback para variáveis de ambiente
-        databricks_host = os.getenv('DATABRICKS_HOST')
-        databricks_token = os.getenv('DATABRICKS_TOKEN')
-        
+        databricks_host = os.getenv("DATABRICKS_HOST")
+        databricks_token = os.getenv("DATABRICKS_TOKEN")
+
         if databricks_host and databricks_token:
             print("✅ Credenciais encontradas via variáveis de ambiente")
             return True
         else:
             print("⚠️  Credenciais não encontradas - usando simulação")
             return False
+
 
 # Carregar configurações
 load_secret_manager_config()
@@ -96,6 +100,7 @@ load_secret_manager_config()
 try:
     import openai
     from openai import OpenAI
+
     OPENAI_AVAILABLE = True
 except ImportError:
     print("⚠️  OpenAI não disponível. Instale: pip install openai")
@@ -109,64 +114,72 @@ try:
     from pyspark.sql.types import *
     import dlt
     from dlt import table, view, expect, expect_all
+
     PYSPARK_AVAILABLE = True
 except ImportError:
     print("⚠️  Pacotes PySpark/DLT não encontrados. Executando em modo simulação.")
     PYSPARK_AVAILABLE = False
+
     # Modo simulação para desenvolvimento local
     class SparkSession:
         @staticmethod
         def builder():
             return SparkSession()
-        
+
         def appName(self, name):
             return self
-            
+
         def config(self, key, value):
             return self
-            
+
         def getOrCreate(self):
             return self
-            
+
         def sql(self, query):
             return MockDataFrame()
-            
+
     class MockDataFrame:
         def collect(self):
             return []
-        
+
         def count(self):
             return 0
-    
+
     class dlt:
         @staticmethod
         def table(*args, **kwargs):
             def decorator(func):
                 return func
+
             return decorator
 
         @staticmethod
         def view(*args, **kwargs):
             def decorator(func):
                 return func
+
             return decorator
 
         @staticmethod
         def expect(*args, **kwargs):
             def decorator(func):
                 return func
+
             return decorator
 
         @staticmethod
         def expect_all(*args, **kwargs):
             def decorator(func):
                 return func
+
             return decorator
+
 
 # Imports para Databricks API
 try:
     from databricks.sdk import WorkspaceClient
     from databricks.sdk.service import jobs, pipelines
+
     DATABRICKS_SDK_AVAILABLE = True
 except ImportError:
     print("⚠️  Databricks SDK não disponível. Instale: pip install databricks-sdk")
@@ -175,18 +188,16 @@ except ImportError:
 # Configuração de logging
 logging.basicConfig(
     level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    handlers=[
-        logging.FileHandler('transform_agent.log'),
-        logging.StreamHandler(sys.stdout)
-    ]
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    handlers=[logging.FileHandler("transform_agent.log"), logging.StreamHandler(sys.stdout)],
 )
 logger = logging.getLogger(__name__)
+
 
 class TransformAgent:
     """
     Agente autônomo com GPT-5 para transformação de dados usando Delta Live Tables (DLT)
-    
+
     O agente usa GPT-5 para tomar decisões autônomas sobre:
     - Perfilamento e análise de dados RAW
     - Planejamento de transformações Bronze/Silver/Gold
@@ -254,7 +265,7 @@ Se encontrar ambiguidades, assuma padrões de mercado e explique sua decisão no
                 logger.info("🤖 GPT-5 conectado com sucesso")
             else:
                 logger.warning("⚠️  OPENAI_API_KEY não configurada - modo simulação")
-        
+
         # Configuração Databricks
         self.databricks_client = None
         if DATABRICKS_SDK_AVAILABLE:
@@ -272,7 +283,7 @@ Se encontrar ambiguidades, assuma padrões de mercado e explique sua decisão no
                 logger.info("⚡ PySpark inicializado com sucesso")
             except Exception as e:
                 logger.warning(f"⚠️  PySpark não disponível: {e}")
-                
+
         # Log das variáveis carregadas (sem mostrar valores sensíveis)
         env_vars = ["OPENAI_API_KEY", "DATABRICKS_HOST", "DATABRICKS_TOKEN"]
         for var in env_vars:
@@ -289,24 +300,24 @@ Se encontrar ambiguidades, assuma padrões de mercado e explique sua decisão no
             "lineage": {},
             "tags": {},
             "access_control": {},
-            "data_quality": {}
+            "data_quality": {},
         }
-        
+
         # Estrutura hierárquica Unity Catalog: catalog.schema.table
         self.raw_tables = {}
         self.target_schemas = {}
-        
+
         # Inicializar estrutura de governança
         self._init_unity_catalog_governance()
-        
+
         # Registrar schemas e tabelas na governança
         self._register_governance_metadata()
-        
+
         for domain in self.domains:
             # RAW tables: catalog.domain_raw.jobs
             raw_schema = f"{domain}_raw"
             self.raw_tables[domain] = f"{catalog_name}.{raw_schema}.jobs"
-            
+
             # Target schemas: catalog.domain_layer
             for layer in self.layers:
                 schema_name = f"{domain}_{layer}"
@@ -326,7 +337,7 @@ Se encontrar ambiguidades, assuma padrões de mercado e explique sua decisão no
             "pipelines_created": [],
             "notebooks_generated": [],
             "llm_decisions": [],
-            "execution_status": {}
+            "execution_status": {},
         }
 
         logger.info(f"🧠 TransformAgent inicializado para catálogo: {catalog_name}")
@@ -335,28 +346,29 @@ Se encontrar ambiguidades, assuma padrões de mercado e explique sua decisão no
     def _init_spark_session(self) -> SparkSession:
         """
         Inicializa sessão Spark local (compatível com LoadAgent existente)
-        
+
         Returns:
             SparkSession configurada para ambiente local
         """
         try:
             # Configuração local robusta (baseada no LoadAgent que já funciona)
-            spark = SparkSession.builder \
-                .appName("TransformAgent_Local") \
-                .master("local[*]") \
-                .config("spark.sql.adaptive.enabled", "true") \
-                .config("spark.sql.adaptive.coalescePartitions.enabled", "true") \
-                .config("spark.serializer", "org.apache.spark.serializer.KryoSerializer") \
-                .config("spark.sql.execution.arrow.pyspark.enabled", "true") \
+            spark = (
+                SparkSession.builder.appName("TransformAgent_Local")
+                .master("local[*]")
+                .config("spark.sql.adaptive.enabled", "true")
+                .config("spark.sql.adaptive.coalescePartitions.enabled", "true")
+                .config("spark.serializer", "org.apache.spark.serializer.KryoSerializer")
+                .config("spark.sql.execution.arrow.pyspark.enabled", "true")
                 .getOrCreate()
-            
+            )
+
             # Teste básico de funcionamento
             test_df = spark.createDataFrame([(1, "test")], ["id", "value"])
             test_count = test_df.count()
             logger.info(f"✅ Spark local inicializado (teste: {test_count} registro)")
-            
+
             return spark
-            
+
         except Exception as e:
             logger.error(f"Erro ao inicializar Spark local: {e}")
             # Retorna None para usar modo simulação
@@ -368,13 +380,13 @@ Se encontrar ambiguidades, assuma padrões de mercado e explique sua decisão no
         Simula funcionalidades completas de governança de dados
         """
         logger.info("🏛️ Inicializando governança Unity Catalog local...")
-        
+
         # 1. Estrutura de Catálogo
         self.unity_catalog["schemas"] = {
             # RAW Schemas
             f"{domain}_raw": {
                 "catalog": self.catalog_name,
-                "name": f"{domain}_raw", 
+                "name": f"{domain}_raw",
                 "comment": f"Schema RAW para dados brutos do domínio {domain}",
                 "owner": "transform_agent",
                 "created_at": datetime.now().isoformat(),
@@ -382,11 +394,12 @@ Se encontrar ambiguidades, assuma padrões de mercado e explique sua decisão no
                     "layer": "raw",
                     "domain": domain,
                     "data_classification": "internal",
-                    "retention_days": "365"
-                }
-            } for domain in self.domains
+                    "retention_days": "365",
+                },
+            }
+            for domain in self.domains
         }
-        
+
         # Bronze/Silver/Gold Schemas
         for domain in self.domains:
             for layer in ["bronze", "silver", "gold"]:
@@ -395,16 +408,16 @@ Se encontrar ambiguidades, assuma padrões de mercado e explique sua decisão no
                     "catalog": self.catalog_name,
                     "name": schema_name,
                     "comment": f"Schema {layer.upper()} para domínio {domain}",
-                    "owner": "transform_agent", 
+                    "owner": "transform_agent",
                     "created_at": datetime.now().isoformat(),
                     "properties": {
                         "layer": layer,
                         "domain": domain,
                         "data_classification": "internal" if layer == "bronze" else "curated",
-                        "sla_hours": "24" if layer == "gold" else "72"
-                    }
+                        "sla_hours": "24" if layer == "gold" else "72",
+                    },
                 }
-        
+
         # 2. Tags de Classificação
         base_tags = {
             "PII": {"description": "Dados pessoais identificáveis"},
@@ -413,31 +426,31 @@ Se encontrar ambiguidades, assuma padrões de mercado e explique sua decisão no
             "ANALYTICS": {"description": "Dados para análise"},
             "BRONZE": {"description": "Camada Bronze - dados brutos"},
             "SILVER": {"description": "Camada Silver - dados limpos"},
-            "GOLD": {"description": "Camada Gold - métricas de negócio"}
+            "GOLD": {"description": "Camada Gold - métricas de negócio"},
         }
-        
+
         # Adicionar tags de domínio
         domain_tags = {f"DOMAIN_{domain.upper()}": {"description": f"Domínio {domain}"} for domain in self.domains}
         self.unity_catalog["tags"] = {**base_tags, **domain_tags}
-        
+
         # 3. Controle de Acesso (RBAC)
         self.unity_catalog["access_control"] = {
             "roles": {
                 "data_engineer": {
                     "permissions": ["SELECT", "CREATE", "INSERT", "UPDATE"],
-                    "schemas": [f"{d}_raw" for d in self.domains] + [f"{d}_bronze" for d in self.domains]
+                    "schemas": [f"{d}_raw" for d in self.domains] + [f"{d}_bronze" for d in self.domains],
                 },
                 "data_analyst": {
                     "permissions": ["SELECT"],
-                    "schemas": [f"{d}_silver" for d in self.domains] + [f"{d}_gold" for d in self.domains]
+                    "schemas": [f"{d}_silver" for d in self.domains] + [f"{d}_gold" for d in self.domains],
                 },
                 "data_scientist": {
                     "permissions": ["SELECT", "CREATE TEMP"],
-                    "schemas": [f"{d}_gold" for d in self.domains]
-                }
+                    "schemas": [f"{d}_gold" for d in self.domains],
+                },
             }
         }
-        
+
         logger.info(f"✅ Estrutura Unity Catalog criada: {len(self.unity_catalog['schemas'])} schemas")
 
     def _register_governance_metadata(self):
@@ -445,46 +458,51 @@ Se encontrar ambiguidades, assuma padrões de mercado e explique sua decisão no
         Registra metadados de governança para todas as tabelas
         """
         logger.info("📋 Registrando metadados de governança...")
-        
+
         # Registrar tabelas RAW
         for domain in self.domains:
             table_name = f"{self.catalog_name}.{domain}_raw.jobs"
             self._register_table_metadata(
                 table_name=table_name,
-                schema_name=f"{domain}_raw", 
+                schema_name=f"{domain}_raw",
                 layer="raw",
                 domain=domain,
                 source="linkedin_extract",
                 description=f"Dados brutos de vagas LinkedIn para {domain}",
-                tags=["BRONZE", f"DOMAIN_{domain.upper()}", "ANALYTICS"]
+                tags=["BRONZE", f"DOMAIN_{domain.upper()}", "ANALYTICS"],
             )
-        
+
         # Registrar tabelas Bronze/Silver/Gold
         for domain in self.domains:
             for layer in ["bronze", "silver", "gold"]:
                 schema_name = f"{domain}_{layer}"
                 table_name = f"{self.catalog_name}.{schema_name}.jobs"
-                
+
                 description_map = {
                     "bronze": f"Dados ingestionados e validados - {domain}",
-                    "silver": f"Dados limpos e normalizados - {domain}", 
-                    "gold": f"Métricas e agregações de negócio - {domain}"
+                    "silver": f"Dados limpos e normalizados - {domain}",
+                    "gold": f"Métricas e agregações de negócio - {domain}",
                 }
-                
+
                 self._register_table_metadata(
                     table_name=table_name,
                     schema_name=schema_name,
                     layer=layer,
-                    domain=domain, 
-                    source=f"{domain}_raw" if layer == "bronze" else f"{domain}_bronze" if layer == "silver" else f"{domain}_silver",
+                    domain=domain,
+                    source=(
+                        f"{domain}_raw"
+                        if layer == "bronze"
+                        else f"{domain}_bronze" if layer == "silver" else f"{domain}_silver"
+                    ),
                     description=description_map[layer],
-                    tags=[layer.upper(), f"DOMAIN_{domain.upper()}", "ANALYTICS"]
+                    tags=[layer.upper(), f"DOMAIN_{domain.upper()}", "ANALYTICS"],
                 )
-        
+
         logger.info(f"✅ {len(self.unity_catalog['tables'])} tabelas registradas na governança")
 
-    def _register_table_metadata(self, table_name: str, schema_name: str, layer: str, 
-                                domain: str, source: str, description: str, tags: List[str]):
+    def _register_table_metadata(
+        self, table_name: str, schema_name: str, layer: str, domain: str, source: str, description: str, tags: List[str]
+    ):
         """
         Registra metadados completos de uma tabela no Unity Catalog
         """
@@ -504,20 +522,20 @@ Se encontrar ambiguidades, assuma padrões de mercado e explique sua decisão no
                 "domain": domain,
                 "source_table": source,
                 "delta.autoOptimize.optimizeWrite": "true",
-                "delta.autoOptimize.autoCompact": "true"
+                "delta.autoOptimize.autoCompact": "true",
             },
             "tags": tags,
             "columns": self._get_standard_schema(layer),
-            "data_quality_rules": self._get_quality_rules(layer)
+            "data_quality_rules": self._get_quality_rules(layer),
         }
-        
+
         # Registrar lineage
         if layer != "raw":
             self.unity_catalog["lineage"][table_name] = {
                 "upstream_tables": [f"{self.catalog_name}.{source}.jobs"],
                 "downstream_tables": [],
                 "transformation_type": "DLT_PIPELINE",
-                "last_updated": datetime.now().isoformat()
+                "last_updated": datetime.now().isoformat(),
             }
 
     def _get_standard_schema(self, layer: str) -> List[Dict]:
@@ -529,64 +547,90 @@ Se encontrar ambiguidades, assuma padrões de mercado e explique sua decisão no
             {"name": "location", "type": "STRING", "nullable": True, "comment": "Localização da vaga"},
             {"name": "description", "type": "STRING", "nullable": True, "comment": "Descrição completa"},
             {"name": "category", "type": "STRING", "nullable": False, "comment": "Categoria da vaga"},
-            {"name": "extract_date", "type": "TIMESTAMP", "nullable": False, "comment": "Data da extração"}
+            {"name": "extract_date", "type": "TIMESTAMP", "nullable": False, "comment": "Data da extração"},
         ]
-        
+
         if layer == "silver":
             # Adiciona colunas de qualidade
-            base_schema.extend([
-                {"name": "data_quality_score", "type": "DOUBLE", "nullable": True, "comment": "Score de qualidade (0-1)"},
-                {"name": "is_valid", "type": "BOOLEAN", "nullable": False, "comment": "Registro válido"}
-            ])
-        
+            base_schema.extend(
+                [
+                    {
+                        "name": "data_quality_score",
+                        "type": "DOUBLE",
+                        "nullable": True,
+                        "comment": "Score de qualidade (0-1)",
+                    },
+                    {"name": "is_valid", "type": "BOOLEAN", "nullable": False, "comment": "Registro válido"},
+                ]
+            )
+
         if layer == "gold":
             # Adiciona métricas de negócio
-            base_schema.extend([
-                {"name": "salary_range", "type": "STRING", "nullable": True, "comment": "Faixa salarial"},
-                {"name": "seniority_level", "type": "STRING", "nullable": True, "comment": "Nível de senioridade"},
-                {"name": "skills_extracted", "type": "ARRAY<STRING>", "nullable": True, "comment": "Skills extraídas"}
-            ])
-            
+            base_schema.extend(
+                [
+                    {"name": "salary_range", "type": "STRING", "nullable": True, "comment": "Faixa salarial"},
+                    {"name": "seniority_level", "type": "STRING", "nullable": True, "comment": "Nível de senioridade"},
+                    {
+                        "name": "skills_extracted",
+                        "type": "ARRAY<STRING>",
+                        "nullable": True,
+                        "comment": "Skills extraídas",
+                    },
+                ]
+            )
+
         return base_schema
 
     def _get_quality_rules(self, layer: str) -> List[Dict]:
         """Define regras de qualidade por camada"""
         rules = [
             {"name": "job_id_not_null", "constraint": "job_id IS NOT NULL", "action": "FAIL"},
-            {"name": "title_not_empty", "constraint": "title IS NOT NULL AND LENGTH(title) > 0", "action": "FAIL"}
+            {"name": "title_not_empty", "constraint": "title IS NOT NULL AND LENGTH(title) > 0", "action": "FAIL"},
         ]
-        
+
         if layer == "silver":
-            rules.extend([
-                {"name": "company_not_null", "constraint": "company IS NOT NULL", "action": "WARN"},
-                {"name": "extract_date_recent", "constraint": "extract_date >= current_date() - interval 30 days", "action": "WARN"},
-                {"name": "unique_job_id", "constraint": "job_id IS UNIQUE", "action": "FAIL"}
-            ])
-            
+            rules.extend(
+                [
+                    {"name": "company_not_null", "constraint": "company IS NOT NULL", "action": "WARN"},
+                    {
+                        "name": "extract_date_recent",
+                        "constraint": "extract_date >= current_date() - interval 30 days",
+                        "action": "WARN",
+                    },
+                    {"name": "unique_job_id", "constraint": "job_id IS UNIQUE", "action": "FAIL"},
+                ]
+            )
+
         if layer == "gold":
-            rules.extend([
-                {"name": "quality_score_range", "constraint": "data_quality_score BETWEEN 0 AND 1", "action": "WARN"},
-                {"name": "valid_records_only", "constraint": "is_valid = true", "action": "FAIL"}
-            ])
-            
+            rules.extend(
+                [
+                    {
+                        "name": "quality_score_range",
+                        "constraint": "data_quality_score BETWEEN 0 AND 1",
+                        "action": "WARN",
+                    },
+                    {"name": "valid_records_only", "constraint": "is_valid = true", "action": "FAIL"},
+                ]
+            )
+
         return rules
 
     def _generate_unity_catalog_report(self) -> Dict[str, Any]:
         """
         Gera relatório completo de governança Unity Catalog
-        
+
         Returns:
             Dict com estrutura completa de governança
         """
         logger.info("📊 Gerando relatório de governança Unity Catalog...")
-        
+
         governance_report = {
             "catalog_summary": {
                 "catalog_name": self.catalog_name,
                 "total_schemas": len(self.unity_catalog["schemas"]),
                 "total_tables": len(self.unity_catalog["tables"]),
                 "total_tags": len(self.unity_catalog["tags"]),
-                "created_at": datetime.now().isoformat()
+                "created_at": datetime.now().isoformat(),
             },
             "schemas": self.unity_catalog["schemas"],
             "tables": self.unity_catalog["tables"],
@@ -594,14 +638,14 @@ Se encontrar ambiguidades, assuma padrões de mercado e explique sua decisão no
             "tags": self.unity_catalog["tags"],
             "access_control": self.unity_catalog["access_control"],
             "data_quality_summary": self._generate_quality_summary(),
-            "governance_compliance": self._check_governance_compliance()
+            "governance_compliance": self._check_governance_compliance(),
         }
-        
+
         # Salvar relatório de governança
         governance_file = os.path.join(self.output_dir, "unity_catalog_governance.json")
         with open(governance_file, "w", encoding="utf-8") as f:
             json.dump(governance_report, f, indent=2, ensure_ascii=False)
-        
+
         logger.info(f"✅ Relatório de governança salvo: {governance_file}")
         return governance_report
 
@@ -610,55 +654,39 @@ Se encontrar ambiguidades, assuma padrões de mercado e explique sua decisão no
         quality_summary = {
             "layers": {},
             "domains": {},
-            "overall_score": 0.85  # Score simulado baseado em regras implementadas
+            "overall_score": 0.85,  # Score simulado baseado em regras implementadas
         }
-        
+
         for layer in ["raw", "bronze", "silver", "gold"]:
             quality_summary["layers"][layer] = {
                 "total_rules": len(self._get_quality_rules(layer)),
                 "critical_rules": len([r for r in self._get_quality_rules(layer) if r["action"] == "FAIL"]),
                 "warning_rules": len([r for r in self._get_quality_rules(layer) if r["action"] == "WARN"]),
-                "expected_sla": "24h" if layer == "gold" else "72h"
+                "expected_sla": "24h" if layer == "gold" else "72h",
             }
-        
+
         for domain in self.domains:
             quality_summary["domains"][domain] = {
                 "tables_count": 4,  # raw + bronze + silver + gold
                 "governance_score": 0.9,  # Score simulado
                 "data_freshness": "< 1 day",
-                "completeness": "95%"
+                "completeness": "95%",
             }
-            
+
         return quality_summary
 
     def _check_governance_compliance(self) -> Dict[str, Any]:
         """Verifica compliance de governança"""
         return {
-            "data_classification": {
-                "status": "COMPLIANT",
-                "coverage": "100%",
-                "missing_classifications": []
-            },
+            "data_classification": {"status": "COMPLIANT", "coverage": "100%", "missing_classifications": []},
             "access_control": {
-                "status": "COMPLIANT", 
+                "status": "COMPLIANT",
                 "rbac_enabled": True,
-                "roles_defined": len(self.unity_catalog["access_control"]["roles"])
+                "roles_defined": len(self.unity_catalog["access_control"]["roles"]),
             },
-            "data_lineage": {
-                "status": "COMPLIANT",
-                "lineage_coverage": "100%",
-                "tracking_enabled": True
-            },
-            "data_quality": {
-                "status": "COMPLIANT",
-                "rules_implemented": True,
-                "monitoring_enabled": True
-            },
-            "retention_policies": {
-                "status": "COMPLIANT",
-                "policies_defined": True,
-                "automated_cleanup": False
-            }
+            "data_lineage": {"status": "COMPLIANT", "lineage_coverage": "100%", "tracking_enabled": True},
+            "data_quality": {"status": "COMPLIANT", "rules_implemented": True, "monitoring_enabled": True},
+            "retention_policies": {"status": "COMPLIANT", "policies_defined": True, "automated_cleanup": False},
         }
 
     def _validate_unity_catalog_structure(self):
@@ -667,26 +695,28 @@ Se encontrar ambiguidades, assuma padrões de mercado e explique sua decisão no
         Conforme especificação: TransformAgent não cria catálogos/schemas
         """
         logger.info("🔍 Validando estrutura Unity Catalog existente...")
-        
+
         validation_result = {
             "catalog_exists": False,
             "schemas_validated": [],
             "missing_schemas": [],
             "validation_status": "unknown",
-            "method": "databricks_sdk" if self.databricks_client else "simulation"
+            "method": "databricks_sdk" if self.databricks_client else "simulation",
         }
-        
+
         try:
             if not self.databricks_client:
                 logger.info("🎭 Simulando validação (modo desenvolvimento)")
-                validation_result.update({
-                    "catalog_exists": True,
-                    "schemas_validated": list(self.unity_catalog["schemas"].keys()),
-                    "missing_schemas": [],
-                    "validation_status": "simulated_ok"
-                })
+                validation_result.update(
+                    {
+                        "catalog_exists": True,
+                        "schemas_validated": list(self.unity_catalog["schemas"].keys()),
+                        "missing_schemas": [],
+                        "validation_status": "simulated_ok",
+                    }
+                )
                 return validation_result
-            
+
             # 1. Verificar se catálogo existe
             try:
                 catalog_info = self.databricks_client.catalogs.get(name=self.catalog_name)
@@ -696,23 +726,21 @@ Se encontrar ambiguidades, assuma padrões de mercado e explique sua decisão no
                 logger.error(f"❌ Catálogo {self.catalog_name} não encontrado: {e}")
                 validation_result["validation_status"] = "catalog_missing"
                 return validation_result
-            
+
             # 2. Validar schemas existentes
             for schema_name in self.unity_catalog["schemas"].keys():
                 try:
-                    schema_info = self.databricks_client.schemas.get(
-                        full_name=f"{self.catalog_name}.{schema_name}"
-                    )
+                    schema_info = self.databricks_client.schemas.get(full_name=f"{self.catalog_name}.{schema_name}")
                     validation_result["schemas_validated"].append(schema_name)
                     logger.info(f"✅ Schema {schema_name} encontrado")
                 except Exception as e:
                     validation_result["missing_schemas"].append(schema_name)
                     logger.warning(f"⚠️  Schema {schema_name} não encontrado: {e}")
-            
+
             # 3. Status final da validação
             total_schemas = len(self.unity_catalog["schemas"])
             validated_schemas = len(validation_result["schemas_validated"])
-            
+
             if validated_schemas == total_schemas:
                 validation_result["validation_status"] = "all_schemas_exist"
                 logger.info(f"✅ Todos os schemas validados: {validated_schemas}/{total_schemas}")
@@ -722,9 +750,9 @@ Se encontrar ambiguidades, assuma padrões de mercado e explique sua decisão no
             else:
                 validation_result["validation_status"] = "no_schemas_exist"
                 logger.error(f"❌ Nenhum schema encontrado: {validated_schemas}/{total_schemas}")
-            
+
             return validation_result
-            
+
         except Exception as e:
             logger.error(f"❌ Erro na validação Unity Catalog: {e}")
             validation_result["validation_status"] = "validation_error"
@@ -734,39 +762,38 @@ Se encontrar ambiguidades, assuma padrões de mercado e explique sua decisão no
     def _execute_pipelines_automatically(self, pipelines: Dict[str, Any]) -> Dict[str, Any]:
         """
         Executa pipelines automaticamente via SDK (autonomia completa)
-        
+
         Args:
             pipelines: Dict com configurações dos pipelines
-            
+
         Returns:
             Dict com resultados da execução
         """
         logger.info("🚀 Executando pipelines automaticamente via SDK...")
-        
+
         execution_results = {
             "timestamp": datetime.now().isoformat(),
             "execution_mode": "databricks_sdk" if self.databricks_client else "simulation",
             "pipelines_executed": [],
             "total_pipelines": len(self.domains),
             "success_count": 0,
-            "status": "running"
+            "status": "running",
         }
-        
+
         for domain in self.domains:
             logger.info(f"🚀 Executando pipeline para domínio: {domain}")
-            
+
             pipeline_result = self._execute_single_pipeline_programmatically(
-                domain=domain,
-                pipeline_config=pipelines.get(domain, {})
+                domain=domain, pipeline_config=pipelines.get(domain, {})
             )
-            
+
             execution_results["pipelines_executed"].append(pipeline_result)
-            
+
             if pipeline_result["status"] in ["completed", "success"]:
                 execution_results["success_count"] += 1
-            
+
             logger.info(f"✅ Pipeline {domain}: {pipeline_result['status']}")
-        
+
         # Status final
         if execution_results["success_count"] == execution_results["total_pipelines"]:
             execution_results["status"] = "completed"
@@ -774,45 +801,47 @@ Se encontrar ambiguidades, assuma padrões de mercado e explique sua decisão no
             execution_results["status"] = "partial_success"
         else:
             execution_results["status"] = "failed"
-            
-        logger.info(f"🎯 Execução concluída: {execution_results['success_count']}/{execution_results['total_pipelines']} pipelines")
-        
+
+        logger.info(
+            f"🎯 Execução concluída: {execution_results['success_count']}/{execution_results['total_pipelines']} pipelines"
+        )
+
         return execution_results
-    
+
     def _execute_single_pipeline_programmatically(self, domain: str, pipeline_config: Dict[str, Any]) -> Dict[str, Any]:
         """
         Executa um pipeline específico via Terraform (substitui Databricks SDK)
-        
+
         Args:
             domain: Domínio do pipeline (data_engineer, data_analytics, digital_analytics)
             pipeline_config: Configuração do pipeline
-            
+
         Returns:
             Dict com resultado da execução
         """
         # Mapear domínios para nomes corretos dos pipelines da arquitetura medalhão
         pipeline_names = {
             "data_engineer": "data_engineer_clean_pipeline",
-            "data_analytics": "data_analytics_clean_pipeline_v2", 
-            "digital_analytics": "digital_analytics_clean_pipeline_v2"
+            "data_analytics": "data_analytics_clean_pipeline_v2",
+            "digital_analytics": "digital_analytics_clean_pipeline_v2",
         }
-        
+
         pipeline_name = pipeline_names.get(domain, f"dlt_vagas_linkedin_{domain}")
-        
+
         result = {
             "domain": domain,
             "pipeline_name": pipeline_name,
             "notebook_path": f"/Shared/{domain}_dlt_transformation",
             "started_at": datetime.now().isoformat(),
             "status": "unknown",
-            "method": "terraform_unified_pipelines"
+            "method": "terraform_unified_pipelines",
         }
-        
+
         try:
             logger.info(f"🏗️ Usando Terraform para gerenciar pipeline arquitetura medalhão: {domain}...")
             logger.info(f"📝 Notebook DLT: /Shared/{domain}_dlt_transformation")
             logger.info(f"🏭 Pipeline: {pipeline_name}")
-            
+
             # 1. Certificar que notebooks da arquitetura medalhão estão gerados
             notebook_file = f"{self.output_dir}/dlt_{domain}_transformation.py"
             if not os.path.exists(notebook_file):
@@ -820,109 +849,102 @@ Se encontrar ambiguidades, assuma padrões de mercado e explique sua decisão no
                 result["status"] = "failed"
                 result["error"] = f"Notebook arquitetura medalhão {notebook_file} não existe"
                 return result
-            
+
             logger.info(f"✅ Notebook arquitetura medalhão encontrado: {notebook_file}")
-            
+
             # 2. Executar Terraform para criar/atualizar pipeline
             terraform_result = self._execute_terraform_pipeline_deployment()
-            
+
             if terraform_result["success"]:
                 result["status"] = "created"
                 result["message"] = f"Pipeline {pipeline_name} gerenciado via Terraform"
                 result["terraform_output"] = terraform_result.get("output", "")
                 result["pipeline_ids"] = terraform_result.get("pipeline_ids", {})
-                
+
                 logger.info(f"✅ Pipeline {pipeline_name} criado via Terraform")
-                
+
                 # 3. Executar pipeline automaticamente via SDK
                 pipeline_ids = terraform_result.get("pipeline_ids", {})
                 if domain in pipeline_ids:
                     pipeline_id = pipeline_ids[domain]
                     logger.info(f"🚀 Iniciando execução do pipeline {domain} (ID: {pipeline_id})...")
-                    
+
                     execution_result = self._start_pipeline_execution(pipeline_id, domain)
                     if execution_result.get("status") in ["started", "already_running", "success"]:
                         result["status"] = "running"
                         result["execution_id"] = execution_result.get("update_id")
                         logger.info(f"✅ Pipeline {domain} iniciado com sucesso")
                     else:
-                        logger.warning(f"⚠️ Pipeline {domain} criado mas falha na execução: {execution_result.get('error')}")
+                        logger.warning(
+                            f"⚠️ Pipeline {domain} criado mas falha na execução: {execution_result.get('error')}"
+                        )
                 else:
                     logger.warning(f"⚠️ Pipeline ID não encontrado para {domain}")
-                
+
             else:
                 result["status"] = "failed"
                 result["error"] = terraform_result.get("error", "Terraform failed")
                 logger.error(f"❌ Falha no Terraform para {domain}: {result['error']}")
-                
+
         except Exception as e:
             logger.error(f"❌ Erro geral no pipeline {domain}: {e}")
-            result["status"] = "failed" 
+            result["status"] = "failed"
             result["error"] = str(e)
-        
+
         result["finished_at"] = datetime.now().isoformat()
         return result
-    
+
     def _execute_terraform_pipeline_deployment(self) -> Dict[str, Any]:
         """
         Executa deployment dos pipelines DLT via Terraform usando os 3 notebooks da arquitetura medalhão.
-        
+
         Notebooks DLT:
         - dlt_data_engineer_transformation.py    → data_engineer_clean_pipeline
-        - dlt_data_analytics_transformation.py   → data_analytics_clean_pipeline_v2  
+        - dlt_data_analytics_transformation.py   → data_analytics_clean_pipeline_v2
         - dlt_digital_analytics_transformation.py → digital_analytics_clean_pipeline_v2
-        
+
         Returns:
             Dict com resultado da execução Terraform
         """
         terraform_dir = os.path.join(os.path.dirname(self.output_dir), "terraform_databricks")
-        
-        result = {
-            "success": False,
-            "output": "",
-            "error": "",
-            "pipeline_ids": {}
-        }
-        
+
+        result = {"success": False, "output": "", "error": "", "pipeline_ids": {}}
+
         try:
             logger.info("🏗️ Inicializando deployment da arquitetura medalhão...")
             logger.info("📊 Pipelines DLT: data_engineer, data_analytics, digital_analytics")
-            
+
             # Verificar se notebooks DLT existem
             notebooks_required = [
                 "dlt_data_engineer_transformation.py",
-                "dlt_data_analytics_transformation.py", 
-                "dlt_digital_analytics_transformation.py"
+                "dlt_data_analytics_transformation.py",
+                "dlt_digital_analytics_transformation.py",
             ]
-            
+
             notebooks_dir = os.path.join(os.path.dirname(self.output_dir), "transform_output")
             missing_notebooks = []
-            
+
             for notebook in notebooks_required:
                 if not os.path.exists(os.path.join(notebooks_dir, notebook)):
                     missing_notebooks.append(notebook)
-            
+
             if missing_notebooks:
                 result["error"] = f"Notebooks DLT não encontrados: {missing_notebooks}"
                 logger.error(f"❌ Notebooks DLT faltando: {missing_notebooks}")
                 return result
-            
+
             logger.info("✅ Notebooks DLT da arquitetura medalhão encontrados")
-            
+
             # 1. Terraform init
             logger.info("🔧 Inicializando Terraform...")
             init_result = subprocess.run(
-                ["terraform", "init"],
-                cwd=terraform_dir,
-                capture_output=True,
-                text=True,
-                timeout=120
+                ["terraform", "init"], cwd=terraform_dir, capture_output=True, text=True, timeout=120
             )
-            
+
             if init_result.returncode != 0:
                 result["error"] = f"Terraform init failed: {init_result.stderr}"
                 return result
-            
+
             # 2. Terraform plan
             logger.info("📋 Gerando plano Terraform para arquitetura medalhão...")
             plan_result = subprocess.run(
@@ -930,13 +952,13 @@ Se encontrar ambiguidades, assuma padrões de mercado e explique sua decisão no
                 cwd=terraform_dir,
                 capture_output=True,
                 text=True,
-                timeout=180
+                timeout=180,
             )
-            
+
             if plan_result.returncode != 0:
                 result["error"] = f"Terraform plan failed: {plan_result.stderr}"
                 return result
-            
+
             # 3. Terraform apply
             logger.info("🚀 Aplicando configuração da arquitetura medalhão...")
             apply_result = subprocess.run(
@@ -944,23 +966,19 @@ Se encontrar ambiguidades, assuma padrões de mercado e explique sua decisão no
                 cwd=terraform_dir,
                 capture_output=True,
                 text=True,
-                timeout=600
+                timeout=600,
             )
-            
+
             if apply_result.returncode != 0:
                 result["error"] = f"Terraform apply failed: {apply_result.stderr}"
                 return result
-            
+
             # 4. Capturar outputs dos pipeline IDs
             logger.info("📊 Capturando IDs dos pipelines criados...")
             output_result = subprocess.run(
-                ["terraform", "output", "-json"],
-                cwd=terraform_dir,
-                capture_output=True,
-                text=True,
-                timeout=30
+                ["terraform", "output", "-json"], cwd=terraform_dir, capture_output=True, text=True, timeout=30
             )
-            
+
             if output_result.returncode == 0:
                 try:
                     outputs = json.loads(output_result.stdout)
@@ -971,11 +989,11 @@ Se encontrar ambiguidades, assuma padrões de mercado e explique sua decisão no
                         logger.info(f"   - {domain}: {pipeline_id}")
                 except json.JSONDecodeError:
                     logger.warning("⚠️  Não foi possível parse dos outputs Terraform")
-            
+
             result["success"] = True
             result["output"] = apply_result.stdout
             logger.info("✅ Arquitetura medalhão (Bronze→Silver→Gold) deployada com sucesso!")
-            
+
         except subprocess.TimeoutExpired:
             result["error"] = "Terraform execution timeout"
             logger.error("❌ Timeout na execução do Terraform")
@@ -985,35 +1003,33 @@ Se encontrar ambiguidades, assuma padrões de mercado e explique sua decisão no
             if current_state in ["RUNNING", "STARTING"]:
                 logger.info(f"✅ Pipeline {domain} já executando")
                 return self._monitor_pipeline_execution(pipeline_id, domain)
-                
+
             # 5. Iniciar com validações de Data Quality
             logger.info(f"▶️ Iniciando pipeline {domain} com DLT avançado...")
-            update = self.databricks_client.pipelines.start_update(
-                pipeline_id=pipeline_id,
-                full_refresh=True
-            )
-            
+            update = self.databricks_client.pipelines.start_update(pipeline_id=pipeline_id, full_refresh=True)
+
             # 6. Monitoramento em tempo real
             execution_result = self._monitor_pipeline_execution(pipeline_id, domain, update.update_id)
             result["execution_id"] = update_response.update_id
-            
+
             logger.info(f"✅ Pipeline {domain} iniciado - Update ID: {update_response.update_id}")
-            
+
             # Aguardar alguns segundos e verificar status
             import time
+
             time.sleep(5)
-            
+
             try:
                 updated_pipeline = w.pipelines.get(pipeline_id=pipeline_id)
                 logger.info(f"📊 Novo estado do pipeline {domain}: {updated_pipeline.state}")
                 result["pipeline_state"] = str(updated_pipeline.state)
             except Exception as status_error:
                 logger.warning(f"⚠️ Não foi possível verificar novo estado: {status_error}")
-            
+
         except Exception as e:
             error_msg = str(e)
             result["error"] = f"Erro na execução pipeline {pipeline_id}: {error_msg}"
-            
+
             # Se pipeline já está executando, marcar como sucesso
             if "active update" in error_msg.lower():
                 logger.info(f"⚡ Pipeline {domain} já tem execução ativa")
@@ -1022,9 +1038,9 @@ Se encontrar ambiguidades, assuma padrões de mercado e explique sua decisão no
             else:
                 logger.error(f"❌ {result['error']}")
                 logger.info(f"💡 Execute manualmente no Databricks: Pipeline ID {pipeline_id}")
-        
+
         return result
-    
+
     def _check_databricks_free_limits(self):
         """Verifica limitações da versão free do Databricks"""
         try:
@@ -1033,38 +1049,30 @@ Se encontrar ambiguidades, assuma padrões de mercado e explique sua decisão no
             return running_count >= 1  # Free tier permite apenas 1 pipeline por vez
         except Exception:
             return True  # Assume limitação se não conseguir verificar
-    
+
     def _diagnose_pipeline_issues(self, pipeline_id: str, domain: str) -> Dict[str, Any]:
         """
         Diagnóstico automático de problemas no pipeline
         """
-        diagnosis = {
-            "status": "healthy",
-            "needs_correction": False,
-            "issues": [],
-            "recommendations": []
-        }
-        
+        diagnosis = {"status": "healthy", "needs_correction": False, "issues": [], "recommendations": []}
+
         try:
             pipeline = self.databricks_client.pipelines.get(pipeline_id=pipeline_id)
-            
+
             # Verificar estado do pipeline
             if pipeline.state and pipeline.state.name in ["FAILED", "STOPPING", "STOPPED"]:
                 diagnosis["issues"].append(f"Pipeline em estado {pipeline.state.name}")
                 diagnosis["needs_correction"] = True
-            
+
             # Verificar se há logs de erro recentes
             try:
-                events = self.databricks_client.pipelines.list_pipeline_events(
-                    pipeline_id=pipeline_id,
-                    max_results=10
-                )
-                
+                events = self.databricks_client.pipelines.list_pipeline_events(pipeline_id=pipeline_id, max_results=10)
+
                 for event in events:
                     if event.level == "ERROR":
                         diagnosis["issues"].append(f"Erro recente: {event.message}")
                         diagnosis["needs_correction"] = True
-                        
+
                         # Classificar tipos de erro
                         if "QUOTA_EXCEEDED" in event.message:
                             diagnosis["recommendations"].append("sequential_execution")
@@ -1072,52 +1080,52 @@ Se encontrar ambiguidades, assuma padrões de mercado e explique sua decisão no
                             diagnosis["recommendations"].append("recreate_volumes")
                         elif "DATASET_NOT_DEFINED" in event.message:
                             diagnosis["recommendations"].append("refresh_schema")
-                            
+
             except Exception:
                 # Se não conseguir acessar eventos, continuar
                 pass
-                
+
             if diagnosis["needs_correction"]:
                 diagnosis["status"] = "needs_attention"
-            
+
         except Exception as e:
             diagnosis["status"] = "error"
             diagnosis["issues"].append(f"Erro no diagnóstico: {str(e)}")
-            
+
         return diagnosis
-    
+
     def _auto_correct_pipeline_issues(self, pipeline_id: str, domain: str, diagnosis: Dict) -> Dict[str, Any]:
         """
         Correção automática de problemas identificados
         """
         result = {"status": "no_action", "actions_taken": []}
-        
+
         try:
             for recommendation in diagnosis.get("recommendations", []):
                 if recommendation == "sequential_execution":
                     # Parar outros pipelines para evitar quota
                     result["actions_taken"].append("stopping_other_pipelines")
                     self._stop_other_pipelines(exclude_domain=domain)
-                    
+
                 elif recommendation == "recreate_volumes":
                     # Recriar volumes se necessário
                     result["actions_taken"].append("recreating_volumes")
                     self._recreate_unity_catalog_volumes()
-                    
+
                 elif recommendation == "refresh_schema":
                     # Refresh do schema Unity Catalog
                     result["actions_taken"].append("refreshing_schema")
                     self._refresh_unity_catalog_schema()
-            
+
             if result["actions_taken"]:
                 result["status"] = "corrected"
-                
+
         except Exception as e:
             result["status"] = "failed"
             result["error"] = str(e)
-            
+
         return result
-    
+
     def _check_databricks_free_limits(self) -> bool:
         """
         Verifica se está atingindo limites da versão free
@@ -1125,7 +1133,7 @@ Se encontrar ambiguidades, assuma padrões de mercado e explique sua decisão no
         try:
             # Verificar quantos pipelines estão executando
             running_pipelines = 0
-            
+
             try:
                 pipelines = self.databricks_client.pipelines.list_pipelines()
                 for pipeline in pipelines:
@@ -1133,97 +1141,82 @@ Se encontrar ambiguidades, assuma padrões de mercado e explique sua decisão no
                         running_pipelines += 1
             except Exception:
                 pass
-            
+
             # Versão free: máximo 1 pipeline concurrent
             return running_pipelines >= 1
-            
+
         except Exception:
             return True  # Assume limitação se não conseguir verificar
-    
+
     def _execute_with_free_tier_limitations(self, pipeline_id: str, domain: str) -> Dict[str, Any]:
         """
         Executa pipeline respeitando limitações da versão free
         """
         logger.info(f"🔒 Executando {domain} com limitações da versão free")
-        
+
         # 1. Parar outros pipelines primeiro
         self._stop_other_pipelines(exclude_domain=domain)
-        
+
         # 2. Aguardar 30 segundos para liberação de recursos
         import time
+
         time.sleep(30)
-        
+
         # 3. Executar pipeline único
         try:
             update = self.databricks_client.pipelines.start_update(
-                pipeline_id=pipeline_id,
-                full_refresh=False  # Incremental para economia
+                pipeline_id=pipeline_id, full_refresh=False  # Incremental para economia
             )
-            
+
             return {
                 "status": "started_with_limitations",
                 "update_id": update.update_id,
-                "message": f"Pipeline {domain} iniciado sequencialmente (versão free)"
+                "message": f"Pipeline {domain} iniciado sequencialmente (versão free)",
             }
-            
+
         except Exception as e:
-            return {
-                "status": "failed",
-                "error": f"Erro mesmo com limitações: {str(e)}"
-            }
-    
+            return {"status": "failed", "error": f"Erro mesmo com limitações: {str(e)}"}
+
     def _monitor_pipeline_execution(self, pipeline_id: str, domain: str, update_id: str = None) -> Dict[str, Any]:
         """
         Monitoramento em tempo real da execução
         """
         import time
+
         max_wait = 1200  # 20 minutos máximo
         check_interval = 15
         elapsed = 0
-        
+
         while elapsed < max_wait:
             try:
                 pipeline = self.databricks_client.pipelines.get(pipeline_id=pipeline_id)
                 state = pipeline.state.name if pipeline.state else "UNKNOWN"
-                
+
                 logger.info(f"📊 {domain} estado: {state} (t+{elapsed}s)")
-                
+
                 if state == "COMPLETED":
-                    return {
-                        "status": "success",
-                        "final_state": state,
-                        "execution_time": elapsed
-                    }
+                    return {"status": "success", "final_state": state, "execution_time": elapsed}
                 elif state in ["FAILED", "CANCELED"]:
-                    return {
-                        "status": "failed",
-                        "final_state": state,
-                        "execution_time": elapsed
-                    }
+                    return {"status": "failed", "final_state": state, "execution_time": elapsed}
                 elif state in ["RUNNING", "STARTING"]:
                     # Coletar métricas se disponível
                     if update_id:
                         try:
                             update_info = self.databricks_client.pipelines.get_update(
-                                pipeline_id=pipeline_id,
-                                update_id=update_id
+                                pipeline_id=pipeline_id, update_id=update_id
                             )
                             logger.info(f"📈 Update {domain}: {update_info.state}")
                         except Exception:
                             pass
-                
+
                 time.sleep(check_interval)
                 elapsed += check_interval
-                
+
             except Exception as e:
                 logger.warning(f"⚠️ Erro no monitoramento {domain}: {e}")
                 break
-        
-        return {
-            "status": "timeout",
-            "final_state": "MONITORING_TIMEOUT",
-            "execution_time": elapsed
-        }
+
+        return {"status": "timeout", "final_state": "MONITORING_TIMEOUT", "execution_time": elapsed}
 
     def _wait_until_idle(self, pipeline_id: str, domain: str, timeout_sec: int = 900) -> bool:
         """
@@ -1231,6 +1224,7 @@ Se encontrar ambiguidades, assuma padrões de mercado e explique sua decisão no
         Retorna True se ficou ocioso, False se expirou.
         """
         import time
+
         waited = 0
         while waited < timeout_sec:
             try:
@@ -1245,172 +1239,158 @@ Se encontrar ambiguidades, assuma padrões de mercado e explique sua decisão no
             waited += 15
         logger.info(f"⏱️ Tempo total aguardando {domain} ficar IDLE/COMPLETED: {waited}s (timeout alcançado)")
         return False
-    
+
     def _handle_quota_exceeded(self, pipeline_id: str, domain: str) -> Dict[str, Any]:
         """
         Tratamento específico para erro de quota
         """
         logger.info(f"🔒 Tratando quota exceeded para {domain}")
-        
+
         # Parar todos os outros pipelines
         self._stop_other_pipelines(exclude_domain=domain)
-        
+
         # Aguardar liberação
         import time
+
         time.sleep(60)
-        
+
         # Tentar novamente
         try:
-            update = self.databricks_client.pipelines.start_update(
-                pipeline_id=pipeline_id,
-                full_refresh=False
-            )
-            
+            update = self.databricks_client.pipelines.start_update(pipeline_id=pipeline_id, full_refresh=False)
+
             return {
                 "status": "recovered_from_quota",
                 "update_id": update.update_id,
-                "action": "stopped_other_pipelines"
+                "action": "stopped_other_pipelines",
             }
         except Exception as e:
-            return {
-                "status": "quota_recovery_failed",
-                "error": str(e)
-            }
-    
+            return {"status": "quota_recovery_failed", "error": str(e)}
+
     def _handle_dataset_not_defined(self, pipeline_id: str, domain: str) -> Dict[str, Any]:
         """
         Tratamento para erro de dataset não definido
         """
         logger.info(f"📋 Corrigindo dataset não definido para {domain}")
-        
+
         try:
             # 1. Refresh do schema Unity Catalog
             self._refresh_unity_catalog_schema()
-            
+
             # 2. Verificar se volumes existem
             self._verify_unity_catalog_volumes()
-            
+
             # 3. Tentar novamente
             update = self.databricks_client.pipelines.start_update(
-                pipeline_id=pipeline_id,
-                full_refresh=True  # Full refresh para recriar tabelas
+                pipeline_id=pipeline_id, full_refresh=True  # Full refresh para recriar tabelas
             )
-            
+
             return {
                 "status": "recovered_from_dataset_error",
                 "update_id": update.update_id,
-                "action": "refreshed_catalog_schema"
+                "action": "refreshed_catalog_schema",
             }
-            
+
         except Exception as e:
-            return {
-                "status": "dataset_recovery_failed",
-                "error": str(e)
-            }
-    
+            return {"status": "dataset_recovery_failed", "error": str(e)}
+
     def _handle_volume_not_found(self, pipeline_id: str, domain: str) -> Dict[str, Any]:
         """
         Tratamento para erro de volume não encontrado
         """
         logger.info(f"💾 Corrigindo volume não encontrado para {domain}")
-        
+
         try:
             # 1. Recriar volumes Unity Catalog
             self._recreate_unity_catalog_volumes()
-            
+
             # 2. Tentar novamente
-            update = self.databricks_client.pipelines.start_update(
-                pipeline_id=pipeline_id,
-                full_refresh=True
-            )
-            
+            update = self.databricks_client.pipelines.start_update(pipeline_id=pipeline_id, full_refresh=True)
+
             return {
                 "status": "recovered_from_volume_error",
                 "update_id": update.update_id,
-                "action": "recreated_volumes"
+                "action": "recreated_volumes",
             }
-            
+
         except Exception as e:
-            return {
-                "status": "volume_recovery_failed",
-                "error": str(e)
-            }
-    
+            return {"status": "volume_recovery_failed", "error": str(e)}
+
     def _stop_other_pipelines(self, exclude_domain: str = None):
         """
         Para todos os pipelines exceto o especificado
         """
         try:
             pipelines = self.databricks_client.pipelines.list_pipelines()
-            
+
             for pipeline in pipelines:
                 if exclude_domain and exclude_domain in pipeline.name:
                     continue
-                    
+
                 if pipeline.state and pipeline.state.name in ["RUNNING", "STARTING"]:
                     try:
                         self.databricks_client.pipelines.stop(pipeline_id=pipeline.pipeline_id)
                         logger.info(f"⏹️ Parado pipeline: {pipeline.name}")
                     except Exception as e:
                         logger.warning(f"⚠️ Erro ao parar {pipeline.name}: {e}")
-                        
+
         except Exception as e:
             logger.warning(f"⚠️ Erro ao listar pipelines: {e}")
-    
+
     def _refresh_unity_catalog_schema(self):
         """
         Refresh do schema Unity Catalog
         """
         try:
             from databricks.sdk.service.catalog import RefreshSchemaRequest
-            
+
             schema_name = f"{self.catalog_name}.default"
-            self.databricks_client.schemas.refresh(
-                RefreshSchemaRequest(name=schema_name)
-            )
+            self.databricks_client.schemas.refresh(RefreshSchemaRequest(name=schema_name))
             logger.info(f"🔄 Schema {schema_name} atualizado")
-            
+
         except Exception as e:
             logger.warning(f"⚠️ Erro no refresh do schema: {e}")
-    
+
     def _verify_unity_catalog_volumes(self) -> bool:
         """
         Verifica se volumes Unity Catalog existem
         """
         try:
-            volumes = self.databricks_client.volumes.list(
-                catalog_name=self.catalog_name,
-                schema_name="default"
-            )
-            
+            volumes = self.databricks_client.volumes.list(catalog_name=self.catalog_name, schema_name="default")
+
             volume_names = [vol.name for vol in volumes]
             logger.info(f"📂 Volumes encontrados: {volume_names}")
-            
+
             return len(volume_names) > 0
-            
+
         except Exception as e:
             logger.warning(f"⚠️ Erro ao verificar volumes: {e}")
             return False
-    
+
     def _recreate_unity_catalog_volumes(self):
         """
         Recria volumes Unity Catalog se necessário
         """
         logger.info("🔧 Verificando necessidade de recriar volumes...")
-        
-        # Esta funcionalidade seria implementada via SQL 
+
+        # Esta funcionalidade seria implementada via SQL
         # executando o script create_raw_tables.sql
         try:
             sql_file = os.path.join(os.path.dirname(self.output_dir), "create_raw_tables.sql")
             if os.path.exists(sql_file):
                 logger.info(f"💾 Executaria script: {sql_file}")
                 # self.databricks_client.sql.execute_sql(sql_file)
-            
+
         except Exception as e:
             logger.warning(f"⚠️ Erro na recriação de volumes: {e}")
 
-    def _send_email(self, subject: str, body: str, attachments: Optional[List[str]] = None,
-                    html_body: Optional[str] = None, inline_images: Optional[List[str]] = None) -> Dict[str, Any]:
+    def _send_email(
+        self,
+        subject: str,
+        body: str,
+        attachments: Optional[List[str]] = None,
+        html_body: Optional[str] = None,
+        inline_images: Optional[List[str]] = None,
+    ) -> Dict[str, Any]:
         """
         Envia e-mail via SMTP usando variáveis de ambiente:
         EMAIL_HOST, EMAIL_PORT, EMAIL_USER, EMAIL_PASS, EMAIL_FROM, EMAIL_TO
@@ -1430,16 +1410,16 @@ Se encontrar ambiguidades, assuma padrões de mercado e explique sua decisão no
             email_from = os.getenv("EMAIL_FROM", user)
             email_to = os.getenv("EMAIL_TO", "paty7sp@gmail.com")
 
-            msg = MIMEMultipart('related')
-            msg['From'] = email_from
-            msg['To'] = email_to
-            msg['Subject'] = subject
+            msg = MIMEMultipart("related")
+            msg["From"] = email_from
+            msg["To"] = email_to
+            msg["Subject"] = subject
 
             # Multipart/alternative para plain e HTML
-            alt = MIMEMultipart('alternative')
-            alt.attach(MIMEText(body or "", 'plain', 'utf-8'))
+            alt = MIMEMultipart("alternative")
+            alt.attach(MIMEText(body or "", "plain", "utf-8"))
             if html_body:
-                alt.attach(MIMEText(html_body, 'html', 'utf-8'))
+                alt.attach(MIMEText(html_body, "html", "utf-8"))
             msg.attach(alt)
 
             # Inline images (CID)
@@ -1447,22 +1427,22 @@ Se encontrar ambiguidades, assuma padrões de mercado e explique sua decisão no
             for idx, img_path in enumerate(inline_images or []):
                 if not img_path or not os.path.exists(img_path):
                     continue
-                with open(img_path, 'rb') as f:
+                with open(img_path, "rb") as f:
                     img = MIMEImage(f.read())
                     cid = f"chart{idx}@inline"
-                    img.add_header('Content-ID', f'<{cid}>')
-                    img.add_header('Content-Disposition', 'inline', filename=os.path.basename(img_path))
+                    img.add_header("Content-ID", f"<{cid}>")
+                    img.add_header("Content-Disposition", "inline", filename=os.path.basename(img_path))
                     msg.attach(img)
                     cid_map[img_path] = cid
 
-            for path in (attachments or []):
+            for path in attachments or []:
                 if not path or not os.path.exists(path):
                     continue
-                part = MIMEBase('application', 'octet-stream')
-                with open(path, 'rb') as f:
+                part = MIMEBase("application", "octet-stream")
+                with open(path, "rb") as f:
                     part.set_payload(f.read())
                 encoders.encode_base64(part)
-                part.add_header('Content-Disposition', f'attachment; filename="{os.path.basename(path)}"')
+                part.add_header("Content-Disposition", f'attachment; filename="{os.path.basename(path)}"')
                 msg.attach(part)
 
             server = smtplib.SMTP(host, port)
@@ -1540,58 +1520,74 @@ Se encontrar ambiguidades, assuma padrões de mercado e explique sua decisão no
                 from reportlab.lib.pagesizes import A4
                 from reportlab.pdfgen import canvas
                 from reportlab.lib.units import cm
+
                 c = canvas.Canvas(pdf_path, pagesize=A4)
                 width, height = A4
-                y = height - 2*cm
+                y = height - 2 * cm
                 c.setFont("Helvetica-Bold", 14)
-                c.drawString(2*cm, y, "Quality Dashboard - Vagas LinkedIn")
-                y -= 1*cm
+                c.drawString(2 * cm, y, "Quality Dashboard - Vagas LinkedIn")
+                y -= 1 * cm
                 c.setFont("Helvetica", 10)
-                c.drawString(2*cm, y, f"Gerado em: {report['generated_at']}")
-                y -= 1*cm
+                c.drawString(2 * cm, y, f"Gerado em: {report['generated_at']}")
+                y -= 1 * cm
                 c.setFont("Helvetica-Bold", 12)
-                c.drawString(2*cm, y, "Consultas (SQL)")
-                y -= 0.6*cm
+                c.drawString(2 * cm, y, "Consultas (SQL)")
+                y -= 0.6 * cm
                 c.setFont("Helvetica", 9)
                 for q in queries:
                     for line in q.split("\n"):
-                        for chunk in [line[i:i+95] for i in range(0, len(line), 95)]:
-                            if y < 2*cm:
-                                c.showPage(); y = height - 2*cm; c.setFont("Helvetica", 9)
-                            c.drawString(2*cm, y, chunk)
-                            y -= 0.4*cm
-                    y -= 0.4*cm
-                if y < 3*cm:
-                    c.showPage(); y = height - 2*cm
+                        for chunk in [line[i : i + 95] for i in range(0, len(line), 95)]:
+                            if y < 2 * cm:
+                                c.showPage()
+                                y = height - 2 * cm
+                                c.setFont("Helvetica", 9)
+                            c.drawString(2 * cm, y, chunk)
+                            y -= 0.4 * cm
+                    y -= 0.4 * cm
+                if y < 3 * cm:
+                    c.showPage()
+                    y = height - 2 * cm
                 c.setFont("Helvetica-Bold", 12)
-                c.drawString(2*cm, y, "Artefatos gerados")
-                y -= 0.6*cm
+                c.drawString(2 * cm, y, "Artefatos gerados")
+                y -= 0.6 * cm
                 c.setFont("Helvetica", 10)
                 for path in [report_path, dashboard_sql_path]:
-                    if y < 2*cm:
-                        c.showPage(); y = height - 2*cm; c.setFont("Helvetica", 10)
-                    c.drawString(2*cm, y, path)
-                    y -= 0.5*cm
+                    if y < 2 * cm:
+                        c.showPage()
+                        y = height - 2 * cm
+                        c.setFont("Helvetica", 10)
+                    c.drawString(2 * cm, y, path)
+                    y -= 0.5 * cm
 
                 # Inserir gráficos se existirem
                 if charts:
-                    if y < 4*cm:
-                        c.showPage(); y = height - 2*cm
+                    if y < 4 * cm:
+                        c.showPage()
+                        y = height - 2 * cm
                     c.setFont("Helvetica-Bold", 12)
-                    c.drawString(2*cm, y, "Gráficos (Resultados)")
-                    y -= 0.8*cm
+                    c.drawString(2 * cm, y, "Gráficos (Resultados)")
+                    y -= 0.8 * cm
                     for img in charts:
                         try:
-                            if y < 8*cm:
-                                c.showPage(); y = height - 2*cm
-                            c.drawImage(img, 2*cm, y-6*cm, width=16*cm, height=6*cm, preserveAspectRatio=True, anchor='sw')
-                            y -= 6.5*cm
+                            if y < 8 * cm:
+                                c.showPage()
+                                y = height - 2 * cm
+                            c.drawImage(
+                                img,
+                                2 * cm,
+                                y - 6 * cm,
+                                width=16 * cm,
+                                height=6 * cm,
+                                preserveAspectRatio=True,
+                                anchor="sw",
+                            )
+                            y -= 6.5 * cm
                         except Exception as ie:
                             logger.warning(f"⚠️  Falha ao inserir gráfico no PDF ({img}): {ie}")
                 c.save()
             except Exception as e:
                 logger.warning(f"⚠️  Falha ao gerar PDF do dashboard: {e}")
-            
+
             # Heurística de inconsistência (placeholders):
             # Idealmente, aqui rodaríamos consultas ao SQL Warehouse para obter métricas
             # e decidir se há alerta. Como fallback, enviamos alerta se existir o relatório.
@@ -1622,12 +1618,14 @@ Se encontrar ambiguidades, assuma padrões de mercado e explique sua decisão no
                 ]
                 for i, img in enumerate(charts):
                     cid = f"chart{i}@inline"
-                    html_parts.append(f"<div><img src=\"cid:{cid}\" alt=\"chart\" style=\"max-width:100%\"/></div><br/>")
+                    html_parts.append(f'<div><img src="cid:{cid}" alt="chart" style="max-width:100%"/></div><br/>')
                 html_parts.append("</body></html>")
                 html_body = "".join(html_parts)
 
                 attachments = [pdf_path, report_path, dashboard_sql_path]
-                email_result = self._send_email(subject, body, attachments=attachments, html_body=html_body, inline_images=charts)
+                email_result = self._send_email(
+                    subject, body, attachments=attachments, html_body=html_body, inline_images=charts
+                )
                 if email_result.get("status") == "sent":
                     logger.info(f"✅ Envio concluído: relatório diário enviado para {email_result.get('to')}")
                 else:
@@ -1638,7 +1636,6 @@ Se encontrar ambiguidades, assuma padrões de mercado e explique sua decisão no
             logger.error(f"❌ Erro ao gerar auditoria de qualidade: {e}")
             return {"status": "error", "error": str(e)}
 
-    
     def _generate_dashboard_charts_via_sql(self, output_dir: str) -> List[str]:
         """
         Gera gráficos PNG (matplotlib) consultando o Databricks SQL Warehouse.
@@ -1647,6 +1644,7 @@ Se encontrar ambiguidades, assuma padrões de mercado e explique sua decisão no
         """
         import os
         import matplotlib.pyplot as plt
+
         charts: List[str] = []
         host = os.getenv("DATABRICKS_HOST")
         token = os.getenv("DATABRICKS_TOKEN")
@@ -1682,7 +1680,9 @@ Se encontrar ambiguidades, assuma padrões de mercado e explique sua decisão no
 
         def run_query(q: str):
             try:
-                with sql.connect(server_hostname=host.replace("https://", ""), http_path=http_path, access_token=token) as conn:
+                with sql.connect(
+                    server_hostname=host.replace("https://", ""), http_path=http_path, access_token=token
+                ) as conn:
                     with conn.cursor() as c:
                         c.execute(q)
                         cols = [desc[0] for desc in c.description]
@@ -1694,10 +1694,10 @@ Se encontrar ambiguidades, assuma padrões de mercado e explique sua decisão no
 
         def plot_series(title: str, x_vals, y_vals, outfile: str):
             try:
-                plt.figure(figsize=(10,4))
-                plt.plot(x_vals, y_vals, marker='o')
+                plt.figure(figsize=(10, 4))
+                plt.plot(x_vals, y_vals, marker="o")
                 plt.title(title)
-                plt.xticks(rotation=45, ha='right')
+                plt.xticks(rotation=45, ha="right")
                 plt.tight_layout()
                 plt.savefig(outfile)
                 plt.close()
@@ -1726,44 +1726,42 @@ Se encontrar ambiguidades, assuma padrões de mercado e explique sua decisão no
         # Upload notebook para o workspace primeiro
         notebook_content = self._get_generated_notebook_content(domain)
         workspace_path = f"/Shared/{domain}_dlt_transformation"
-        
+
         try:
             # Upload via SDK com formato correto
             from databricks.sdk.service.workspace import ImportFormat, Language
-            
+
             self.databricks_client.workspace.upload(
                 path=workspace_path,
-                content=notebook_content.encode('utf-8'),
-                language=Language.PYTHON, 
+                content=notebook_content.encode("utf-8"),
+                language=Language.PYTHON,
                 overwrite=True,
-                format=ImportFormat.SOURCE
+                format=ImportFormat.SOURCE,
             )
             logger.info(f"📤 Notebook uploaded: {workspace_path}")
         except Exception as upload_error:
             logger.warning(f"⚠️  Erro no upload: {upload_error}")
             # Usar path local como fallback
             workspace_path = f"./transform_output/dlt_{domain}_transformation.py"
-        
+
         # Usar classes SDK corretas - SERVERLESS COMPUTE obrigatório
         from databricks.sdk.service.pipelines import NotebookLibrary
-        
+
         return {
             "name": f"dlt_vagas_linkedin_{domain}",
             "storage": f"/tmp/dlt_storage/{domain}/",
             "configuration": {
                 "pipelines.autoOptimize.managed": "true",
-                "pipelines.autoOptimize.zOrderCols": "extract_date"
+                "pipelines.autoOptimize.zOrderCols": "extract_date",
             },
-            "libraries": [
-                NotebookLibrary(path=workspace_path)
-            ],
+            "libraries": [NotebookLibrary(path=workspace_path)],
             "target": f"{self.catalog_name}",
             "catalog": f"{self.catalog_name}",  # Obrigatório para serverless
             "continuous": False,
             "development": True,
-            "serverless": True
+            "serverless": True,
         }
-    
+
     def _get_generated_notebook_content(self, domain: str) -> str:
         """Lê conteúdo do notebook gerado"""
         notebook_file = f"{self.output_dir}/dlt_{domain}_transformation.py"
@@ -1776,11 +1774,11 @@ Se encontrar ambiguidades, assuma padrões de mercado e explique sua decisão no
 
     def run_autonomous_transformation(self) -> Dict[str, Any]:
         """
-        Executa transformação autônoma completa
+                Executa transformação autônoma completa
 
-        Returns:
-{{ ... }}
-            Dict com PLAN.yaml, NOTEBOOKS, PIPELINES, RUN_STEPS e REPORT.md
+                Returns:
+        {{ ... }}
+                    Dict com PLAN.yaml, NOTEBOOKS, PIPELINES, RUN_STEPS e REPORT.md
         """
         logger.info("🚀 Iniciando transformação autônoma...")
 
@@ -1818,7 +1816,7 @@ Se encontrar ambiguidades, assuma padrões de mercado e explique sua decisão no
                 "pipelines": pipelines,
                 "pipeline_execution": run_steps,
                 "governance": governance_report,
-                "catalog_validation": catalog_validation_result
+                "catalog_validation": catalog_validation_result,
             }
             report = self._generate_comprehensive_report(raw_profile, execution_results)
 
@@ -1830,12 +1828,12 @@ Se encontrar ambiguidades, assuma padrões de mercado e explique sua decisão no
             return {
                 "PLAN.yaml": plan,
                 "NOTEBOOKS": notebooks,
-                "PIPELINES": pipelines, 
+                "PIPELINES": pipelines,
                 "RUN_STEPS": run_steps,
                 "REPORT.md": report,
                 "GOVERNANCE": governance_report,
                 "execution_time_seconds": execution_time,
-                "metrics": self.metrics
+                "metrics": self.metrics,
             }
 
         except Exception as e:
@@ -1853,11 +1851,7 @@ Se encontrar ambiguidades, assuma padrões de mercado e explique sua decisão no
         """
         logger.info("🔍 Iniciando perfilamento inteligente dos dados RAW com GPT-5...")
 
-        profile = {
-            "timestamp": datetime.now().isoformat(),
-            "domains": {},
-            "llm_analysis": None
-        }
+        profile = {"timestamp": datetime.now().isoformat(), "domains": {}, "llm_analysis": None}
 
         for domain, table_name in self.raw_tables.items():
             logger.info(f"📊 Profilando domínio: {domain}")
@@ -1865,7 +1859,7 @@ Se encontrar ambiguidades, assuma padrões de mercado e explique sua decisão no
             try:
                 domain_profile = self._profile_domain_table(domain, table_name)
                 profile["domains"][domain] = domain_profile
-                
+
                 logger.info(f"✅ Domínio {domain} perfilado: {domain_profile.get('actual_rows', 0)} registros")
 
             except Exception as e:
@@ -1878,12 +1872,14 @@ Se encontrar ambiguidades, assuma padrões de mercado e explique sua decisão no
             try:
                 llm_analysis = self._llm_analyze_profile(profile["domains"])
                 profile["llm_analysis"] = llm_analysis
-                self.metrics["llm_decisions"].append({
-                    "step": "profile_analysis",
-                    "input": "raw_data_profile",
-                    "output": llm_analysis,
-                    "timestamp": datetime.now().isoformat()
-                })
+                self.metrics["llm_decisions"].append(
+                    {
+                        "step": "profile_analysis",
+                        "input": "raw_data_profile",
+                        "output": llm_analysis,
+                        "timestamp": datetime.now().isoformat(),
+                    }
+                )
                 logger.info("🤖 GPT-5 análise de perfil concluída")
             except Exception as e:
                 logger.error(f"❌ Erro na análise GPT-5: {e}")
@@ -1908,61 +1904,63 @@ Se encontrar ambiguidades, assuma padrões de mercado e explique sua decisão no
         try:
             # Usa estrutura de dados do LoadAgent existente
             logger.info(f"🔍 Perfilando tabela do LoadAgent: {table_name}")
-            
+
             # Tenta ler dados JSON diretamente (como LoadAgent faz)
             data_path = f"data_extracts/*/{domain}/"
-            
+
             try:
                 # Lê dados JSON como no LoadAgent
-                df = self.spark.read \
-                    .option("multiline", "true") \
-                    .json(data_path)
-                
+                df = self.spark.read.option("multiline", "true").json(data_path)
+
                 total_rows = df.count()
                 logger.info(f"📊 {domain}: {total_rows} registros encontrados")
-                
+
                 # Schema da tabela
                 schema_info = {field.name: str(field.dataType) for field in df.schema.fields}
-                
+
                 # Amostra de dados
                 sample_data = df.limit(5).collect()
-                
+
             except Exception as json_error:
                 logger.warning(f"⚠️  Não foi possível ler dados JSON: {json_error}")
                 # Usa dados simulados baseados na memória do LoadAgent
                 total_rows = {"data_engineer": 46, "data_analytics": 46, "digital_analytics": 24}.get(domain, 0)
                 schema_info = {
                     "job_id": "string",
-                    "title": "string", 
+                    "title": "string",
                     "company": "string",
                     "location": "string",
                     "description": "string",
                     "category": "string",
-                    "extract_date": "timestamp"
+                    "extract_date": "timestamp",
                 }
                 sample_data = []
 
             # 4. Estatísticas de qualidade por coluna
             quality_stats = {}
             for col_name in schema_info.keys():
-                if col_name not in ['col_name', 'data_type', 'comment']:
+                if col_name not in ["col_name", "data_type", "comment"]:
                     try:
                         # Contagem de nulos
-                        null_count_df = self.spark.sql(f"""
+                        null_count_df = self.spark.sql(
+                            f"""
                             SELECT COUNT(*) as nulls 
                             FROM {table_name} 
                             WHERE {col_name} IS NULL
-                        """)
-                        null_count = null_count_df.collect()[0]['nulls']
+                        """
+                        )
+                        null_count = null_count_df.collect()[0]["nulls"]
                         null_ratio = null_count / total_rows if total_rows > 0 else 0
 
                         # Contagem de valores únicos (para colunas com poucos valores)
                         if null_ratio < 0.9:  # Só se não for quase tudo nulo
-                            distinct_count_df = self.spark.sql(f"""
+                            distinct_count_df = self.spark.sql(
+                                f"""
                                 SELECT COUNT(DISTINCT {col_name}) as distinct_vals
                                 FROM {table_name}
-                            """)
-                            distinct_count = distinct_count_df.collect()[0]['distinct_vals']
+                            """
+                            )
+                            distinct_count = distinct_count_df.collect()[0]["distinct_vals"]
                             unique_ratio = distinct_count / total_rows if total_rows > 0 else 0
                         else:
                             unique_ratio = 0
@@ -1970,8 +1968,8 @@ Se encontrar ambiguidades, assuma padrões de mercado e explique sua decisão no
                         quality_stats[col_name] = {
                             "null_count": null_count,
                             "null_ratio": null_ratio,
-                            "distinct_count": distinct_count if 'distinct_count' in locals() else 0,
-                            "unique_ratio": unique_ratio
+                            "distinct_count": distinct_count if "distinct_count" in locals() else 0,
+                            "unique_ratio": unique_ratio,
                         }
 
                     except Exception as col_error:
@@ -1981,18 +1979,20 @@ Se encontrar ambiguidades, assuma padrões de mercado e explique sua decisão no
             # 5. Top valores para colunas categóricas
             categorical_analysis = {}
             for col_name, col_type in schema_info.items():
-                if col_type in ['string', 'varchar'] and col_name in quality_stats:
+                if col_type in ["string", "varchar"] and col_name in quality_stats:
                     if quality_stats[col_name].get("unique_ratio", 1) < 0.1:  # Colunas com poucos valores únicos
                         try:
-                            top_values_df = self.spark.sql(f"""
+                            top_values_df = self.spark.sql(
+                                f"""
                                 SELECT {col_name}, COUNT(*) as freq
                                 FROM {table_name}
                                 WHERE {col_name} IS NOT NULL
                                 GROUP BY {col_name}
                                 ORDER BY freq DESC
                                 LIMIT 10
-                            """)
-                            top_values = [(row[col_name], row['freq']) for row in top_values_df.collect()]
+                            """
+                            )
+                            top_values = [(row[col_name], row["freq"]) for row in top_values_df.collect()]
                             categorical_analysis[col_name] = top_values
                         except Exception as e:
                             logger.warning(f"⚠️  Erro na análise categórica de {col_name}: {e}")
@@ -2005,7 +2005,7 @@ Se encontrar ambiguidades, assuma padrões de mercado e explique sua decisão no
                 "quality_stats": quality_stats,
                 "categorical_analysis": categorical_analysis,
                 "sample_records": [row.asDict() for row in sample_data[:5]],  # Primeiros 5 registros
-                "profiling_timestamp": datetime.now().isoformat()
+                "profiling_timestamp": datetime.now().isoformat(),
             }
 
             self.metrics["raw_rows_read"][domain] = total_rows
@@ -2029,27 +2029,27 @@ Se encontrar ambiguidades, assuma padrões de mercado e explique sua decisão no
             Dict com perfil simulado
         """
         simulated_rows = {"data_engineer": 1000, "data_analytics": 800, "digital_analytics": 600}
-        
+
         return {
             "table_name": table_name,
             "domain": domain,
             "actual_rows": simulated_rows.get(domain, 500),
             "schema": {
                 "job_id": "string",
-                "title": "string", 
+                "title": "string",
                 "company": "string",
                 "location": "string",
                 "description": "string",
                 "category": "string",
                 "extract_date": "timestamp",
                 "type": "string",
-                "salary_range": "string"
+                "salary_range": "string",
             },
             "quality_stats": {
                 "job_id": {"null_ratio": 0.0, "unique_ratio": 1.0},
                 "title": {"null_ratio": 0.01, "unique_ratio": 0.95},
                 "company": {"null_ratio": 0.02, "unique_ratio": 0.3},
-                "location": {"null_ratio": 0.15, "unique_ratio": 0.1}
+                "location": {"null_ratio": 0.15, "unique_ratio": 0.1},
             },
             "sample_records": [
                 {
@@ -2059,10 +2059,10 @@ Se encontrar ambiguidades, assuma padrões de mercado e explique sua decisão no
                     "location": "São Paulo, SP - Brasil",
                     "description": f"Looking for experienced {domain.replace('_', ' ')} professional...",
                     "category": domain,
-                    "extract_date": "2025-09-04T10:00:00Z"
+                    "extract_date": "2025-09-04T10:00:00Z",
                 }
             ],
-            "note": "SIMULATED_DATA - Real connection unavailable"
+            "note": "SIMULATED_DATA - Real connection unavailable",
         }
 
     def _llm_analyze_profile(self, domains_profile: Dict[str, Any]) -> Dict[str, Any]:
@@ -2080,7 +2080,7 @@ Se encontrar ambiguidades, assuma padrões de mercado e explique sua decisão no
 
         try:
             profile_summary = json.dumps(domains_profile, indent=2, default=str)
-            
+
             prompt = f"""
 {self.AGENT_PROMPT}
 
@@ -2138,15 +2138,18 @@ Responda APENAS em JSON válido com esta estrutura:
             response = self.openai_client.chat.completions.create(
                 model="gpt-4o-mini",  # Using available model (GPT-5 not yet available)
                 messages=[
-                    {"role": "system", "content": "You are an expert data engineer specializing in Databricks and Delta Live Tables."},
-                    {"role": "user", "content": prompt}
+                    {
+                        "role": "system",
+                        "content": "You are an expert data engineer specializing in Databricks and Delta Live Tables.",
+                    },
+                    {"role": "user", "content": prompt},
                 ],
                 temperature=0.1,  # Low temperature for consistent decisions
-                max_tokens=2000
+                max_tokens=2000,
             )
 
             llm_response = response.choices[0].message.content
-            
+
             # Tenta parsear JSON da resposta
             try:
                 analysis = json.loads(llm_response)
@@ -2154,11 +2157,7 @@ Responda APENAS em JSON válido com esta estrutura:
                 return analysis
             except json.JSONDecodeError:
                 logger.warning("⚠️  Resposta GPT não é JSON válido, usando análise textual")
-                return {
-                    "raw_analysis": llm_response,
-                    "parsing_error": "Could not parse as JSON",
-                    "fallback": True
-                }
+                return {"raw_analysis": llm_response, "parsing_error": "Could not parse as JSON", "fallback": True}
 
         except Exception as e:
             logger.error(f"❌ Erro na análise GPT-5: {e}")
@@ -2166,8 +2165,11 @@ Responda APENAS em JSON válido com esta estrutura:
                 "error": str(e),
                 "fallback_analysis": {
                     "data_quality_assessment": {"overall_score": 7, "recommendations": ["standard cleaning rules"]},
-                    "transformation_strategy": {"bronze_rules": ["basic normalization"], "silver_rules": ["standard enrichment"]}
-                }
+                    "transformation_strategy": {
+                        "bronze_rules": ["basic normalization"],
+                        "silver_rules": ["standard enrichment"],
+                    },
+                },
             }
 
     def _generate_transformation_plan_with_llm(self, raw_profile: Dict[str, Any]) -> str:
@@ -2184,7 +2186,7 @@ Responda APENAS em JSON válido com esta estrutura:
 
         # Usa análise LLM se disponível
         llm_analysis = raw_profile.get("llm_analysis", {})
-        
+
         # Se não tem análise LLM, solicita decisões específicas
         if not llm_analysis or llm_analysis.get("error"):
             logger.info("🤖 Solicitando decisões específicas do GPT para plano de transformação...")
@@ -2207,7 +2209,6 @@ Responda APENAS em JSON válido com esta estrutura:
             "generated_at": datetime.now().isoformat(),
             "catalog": self.catalog_name,
             "domains": list(self.domains),
-
             "transformation_plan": {
                 "bronze_layer": {
                     "description": "Camada de ingestão padronizada - limpeza mínima e deduplicação",
@@ -2221,8 +2222,8 @@ Responda APENAS em JSON válido com esta estrutura:
                                 "TRIM all string columns",
                                 "LOWER case for company names",
                                 "Parse dates from string to timestamp",
-                                "Standardize location format"
-                            ]
+                                "Standardize location format",
+                            ],
                         },
                         {
                             "name": "deduplication",
@@ -2230,21 +2231,18 @@ Responda APENAS em JSON válido com esta estrutura:
                             "rules": [
                                 "Use job_id + extract_date as deduplication key",
                                 "Keep most recent record per key",
-                                "Log duplicate count for monitoring"
-                            ]
-                        }
+                                "Log duplicate count for monitoring",
+                            ],
+                        },
                     ],
                     "quality_expectations": [
                         "job_title IS NOT NULL",
                         "company_name IS NOT NULL",
                         "extract_date IS NOT NULL",
-                        "job_id IS NOT NULL AND LENGTH(job_id) > 0"
+                        "job_id IS NOT NULL AND LENGTH(job_id) > 0",
                     ],
-                    "output_tables": [
-                        f"{self.catalog_name}.{domain}_bronze.jobs_bronze" for domain in self.domains
-                    ]
+                    "output_tables": [f"{self.catalog_name}.{domain}_bronze.jobs_bronze" for domain in self.domains],
                 },
-
                 "silver_layer": {
                     "description": "Camada de refinamento - normalização avançada e enriquecimento",
                     "source_tables": [f"{self.catalog_name}.{domain}_bronze.jobs_bronze" for domain in self.domains],
@@ -2256,8 +2254,8 @@ Responda APENAS em JSON válido com esta estrutura:
                             "rules": [
                                 "Split location by comma and dash",
                                 "Standardize state abbreviations",
-                                "Handle international locations"
-                            ]
+                                "Handle international locations",
+                            ],
                         },
                         {
                             "name": "technology_extraction",
@@ -2265,8 +2263,8 @@ Responda APENAS em JSON válido com esta estrutura:
                             "rules": [
                                 "Use regex patterns for tech keywords",
                                 "Categorize technologies (Python, Spark, etc.)",
-                                "Create tech_stack array column"
-                            ]
+                                "Create tech_stack array column",
+                            ],
                         },
                         {
                             "name": "seniority_classification",
@@ -2274,22 +2272,19 @@ Responda APENAS em JSON válido com esta estrutura:
                             "rules": [
                                 "Analyze title keywords (Senior, Junior, Lead)",
                                 "Use description content for context",
-                                "Create seniority_level column"
-                            ]
-                        }
+                                "Create seniority_level column",
+                            ],
+                        },
                     ],
                     "quality_expectations": [
                         "job_title IS NOT NULL",
                         "company_name IS NOT NULL",
                         "city IS NOT NULL",
                         "country IS NOT NULL",
-                        "seniority_level IN ('Junior', 'Pleno', 'Senior', 'Lead', 'Principal')"
+                        "seniority_level IN ('Junior', 'Pleno', 'Senior', 'Lead', 'Principal')",
                     ],
-                    "output_tables": [
-                        f"{self.catalog_name}.{domain}_silver.jobs_silver" for domain in self.domains
-                    ]
+                    "output_tables": [f"{self.catalog_name}.{domain}_silver.jobs_silver" for domain in self.domains],
                 },
-
                 "gold_layer": {
                     "description": "Camada de insights - métricas e agregações para BI",
                     "source_tables": [f"{self.catalog_name}.{domain}_silver.jobs_silver" for domain in self.domains],
@@ -2301,8 +2296,8 @@ Responda APENAS em JSON válido com esta estrutura:
                             "rules": [
                                 "Group by date, domain, company, city",
                                 "Count jobs per category",
-                                "Calculate averages and trends"
-                            ]
+                                "Calculate averages and trends",
+                            ],
                         },
                         {
                             "name": "technology_ranking",
@@ -2310,56 +2305,51 @@ Responda APENAS em JSON válido com esta estrutura:
                             "rules": [
                                 "Explode tech_stack arrays",
                                 "Count technology mentions",
-                                "Create rolling windows (30/90 days)"
-                            ]
-                        }
+                                "Create rolling windows (30/90 days)",
+                            ],
+                        },
                     ],
                     "output_tables": [
                         f"{self.catalog_name}.{domain}_gold.jobs_daily_metrics" for domain in self.domains
-                    ] + [
-                        f"{self.catalog_name}.{domain}_gold.tech_ranking" for domain in self.domains
-                    ] + [
-                        f"{self.catalog_name}.{domain}_gold.location_insights" for domain in self.domains
                     ]
-                }
+                    + [f"{self.catalog_name}.{domain}_gold.tech_ranking" for domain in self.domains]
+                    + [f"{self.catalog_name}.{domain}_gold.location_insights" for domain in self.domains],
+                },
             },
-
             "data_quality": {
                 "bronze_thresholds": {
                     "null_threshold": 0.05,  # Máximo 5% de nulos
-                    "duplicate_threshold": 0.10  # Máximo 10% de duplicatas
+                    "duplicate_threshold": 0.10,  # Máximo 10% de duplicatas
                 },
                 "silver_thresholds": {
                     "null_threshold": 0.02,  # Máximo 2% de nulos
-                    "data_completeness": 0.95  # Mínimo 95% de completude
-                }
+                    "data_completeness": 0.95,  # Mínimo 95% de completude
+                },
             },
-
             "performance_optimizations": {
                 "partitioning": {
                     "bronze": ["extract_date"],
                     "silver": ["extract_date", "country"],
-                    "gold": ["date", "domain"]
+                    "gold": ["date", "domain"],
                 },
                 "z_order": {
                     "bronze": ["job_id"],
                     "silver": ["company", "seniority_level"],
-                    "gold": ["date", "company"]
-                }
+                    "gold": ["date", "company"],
+                },
             },
-
             "assumptions_made": [
                 "Dados RAW seguem o schema identificado no perfilamento",
                 "job_id é único e não nulo",
                 "extract_date está em formato ISO",
                 "Location segue padrão 'Cidade, Estado - País'",
-                "Tech stack pode ser extraída via regex patterns"
-            ]
+                "Tech stack pode ser extraída via regex patterns",
+            ],
         }
 
         # Salva o plano em arquivo
         plan_file = os.path.join(self.output_dir, "transformation_plan.yaml")
-        with open(plan_file, 'w', encoding='utf-8') as f:
+        with open(plan_file, "w", encoding="utf-8") as f:
             yaml.dump(plan, f, default_flow_style=False, allow_unicode=True)
 
         logger.info(f"✅ Plano de transformação salvo em: {plan_file}")
@@ -2394,7 +2384,7 @@ Responda APENAS em JSON válido com esta estrutura:
 
         # Salva o plano em arquivo
         plan_file = os.path.join(self.output_dir, "transformation_plan.yaml")
-        with open(plan_file, 'w', encoding='utf-8') as f:
+        with open(plan_file, "w", encoding="utf-8") as f:
             yaml.dump(plan, f, default_flow_style=False, allow_unicode=True)
 
         logger.info(f"✅ Plano de transformação com LLM salvo em: {plan_file}")
@@ -2440,23 +2430,24 @@ Retorne APENAS JSON válido com decisões técnicas detalhadas:
             response = self.openai_client.chat.completions.create(
                 model="gpt-4o-mini",
                 messages=[
-                    {"role": "system", "content": "You are an autonomous data engineering agent. Make specific technical decisions."},
-                    {"role": "user", "content": prompt}
+                    {
+                        "role": "system",
+                        "content": "You are an autonomous data engineering agent. Make specific technical decisions.",
+                    },
+                    {"role": "user", "content": prompt},
                 ],
                 temperature=0.1,
-                max_tokens=1500
+                max_tokens=1500,
             )
 
             decisions = json.loads(response.choices[0].message.content)
-            
-            self.metrics["llm_decisions"].append({
-                "step": "transformation_decisions",
-                "decisions": decisions,
-                "timestamp": datetime.now().isoformat()
-            })
-            
+
+            self.metrics["llm_decisions"].append(
+                {"step": "transformation_decisions", "decisions": decisions, "timestamp": datetime.now().isoformat()}
+            )
+
             return decisions
-            
+
         except Exception as e:
             logger.error(f"❌ Erro nas decisões LLM: {e}")
             return {"error": str(e)}
@@ -2473,27 +2464,27 @@ Retorne APENAS JSON válido com decisões técnicas detalhadas:
             Dict com notebooks por domínio
         """
         logger.info("📝 Gerando notebooks DLT com otimizações LLM...")
-        
+
         notebooks = {}
         llm_analysis = raw_profile.get("llm_analysis", {})
 
         for domain in self.domains:
             logger.info(f"📋 Gerando notebook DLT para domínio: {domain}")
-            
+
             # Usa LLM para gerar código otimizado se disponível
             if self.openai_client and llm_analysis:
                 notebook_code = self._llm_generate_dlt_code(domain, plan_yaml, raw_profile)
             else:
                 # Fallback para geração tradicional
                 notebook_code = self._generate_traditional_dlt_code(domain, plan_yaml)
-            
+
             notebooks[domain] = notebook_code
-            
+
             # Salva notebook em arquivo
             notebook_file = os.path.join(self.output_dir, f"dlt_{domain}_transformation.py")
-            with open(notebook_file, 'w', encoding='utf-8') as f:
+            with open(notebook_file, "w", encoding="utf-8") as f:
                 f.write(notebook_code)
-            
+
             self.metrics["notebooks_generated"].append(notebook_file)
             logger.info(f"✅ Notebook {domain} salvo em: {notebook_file}")
 
@@ -2508,7 +2499,7 @@ Retorne APENAS JSON válido com decisões técnicas detalhadas:
 
         try:
             domain_profile = raw_profile.get("domains", {}).get(domain, {})
-            
+
             prompt = f"""
 {self.AGENT_PROMPT}
 
@@ -2533,24 +2524,29 @@ Retorne APENAS código Python válido, sem markdown.
             response = self.openai_client.chat.completions.create(
                 model="gpt-4o-mini",
                 messages=[
-                    {"role": "system", "content": "You are an expert in Databricks DLT. Generate production-ready code."},
-                    {"role": "user", "content": prompt}
+                    {
+                        "role": "system",
+                        "content": "You are an expert in Databricks DLT. Generate production-ready code.",
+                    },
+                    {"role": "user", "content": prompt},
                 ],
                 temperature=0.1,
-                max_tokens=3000
+                max_tokens=3000,
             )
 
             generated_code = response.choices[0].message.content
-            
-            self.metrics["llm_decisions"].append({
-                "step": f"dlt_code_generation_{domain}",
-                "input": f"profile + plan for {domain}",
-                "output_length": len(generated_code),
-                "timestamp": datetime.now().isoformat()
-            })
-            
+
+            self.metrics["llm_decisions"].append(
+                {
+                    "step": f"dlt_code_generation_{domain}",
+                    "input": f"profile + plan for {domain}",
+                    "output_length": len(generated_code),
+                    "timestamp": datetime.now().isoformat(),
+                }
+            )
+
             return generated_code
-            
+
         except Exception as e:
             logger.error(f"❌ Erro na geração LLM para {domain}: {e}")
             return self._generate_traditional_dlt_code(domain, plan_yaml)
@@ -2576,7 +2572,7 @@ Retorne APENAS código Python válido, sem markdown.
 
             # Salva notebook
             notebook_file = os.path.join(self.output_dir, f"dlt_{domain}_transformation.py")
-            with open(notebook_file, 'w', encoding='utf-8') as f:
+            with open(notebook_file, "w", encoding="utf-8") as f:
                 f.write(notebook_content)
 
             notebooks[domain] = notebook_content
@@ -3035,7 +3031,7 @@ print(f"  - Views: vw_jobs_current, vw_data_quality")
 
             # Salva configuração
             config_file = os.path.join(self.output_dir, f"dlt_pipeline_{domain}.json")
-            with open(config_file, 'w', encoding='utf-8') as f:
+            with open(config_file, "w", encoding="utf-8") as f:
                 json.dump(pipeline_config, f, indent=2, ensure_ascii=False)
 
             pipelines[domain] = json.dumps(pipeline_config, indent=2, ensure_ascii=False)
@@ -3056,10 +3052,7 @@ print(f"  - Views: vw_jobs_current, vw_data_quality")
         config = {
             "name": f"vagas_linkedin_{domain}_transformation",
             "storage": f"dbfs:/pipelines/{domain}_transformation",
-            "configuration": {
-                "pipeline.reset.allowed": "true",
-                "pipelines.clusterShutdown.delay": "60s"
-            },
+            "configuration": {"pipeline.reset.allowed": "true", "pipelines.clusterShutdown.delay": "60s"},
             "clusters": [
                 {
                     "label": "default",
@@ -3071,14 +3064,10 @@ print(f"  - Views: vw_jobs_current, vw_data_quality")
                         "spark.sql.adaptive.enabled": "true",
                         "spark.sql.adaptive.coalescePartitions.enabled": "true",
                         "spark.databricks.delta.optimizeWrite.enabled": "true",
-                        "spark.databricks.delta.autoCompact.enabled": "true"
+                        "spark.databricks.delta.autoCompact.enabled": "true",
                     },
                     "init_scripts": [],
-                    "custom_tags": {
-                        "team": "data-engineering",
-                        "project": "vagas-linkedin",
-                        "domain": domain
-                    }
+                    "custom_tags": {"team": "data-engineering", "project": "vagas-linkedin", "domain": domain},
                 }
             ],
             "development": True,
@@ -3096,17 +3085,10 @@ print(f"  - Views: vw_jobs_current, vw_data_quality")
             "target": f"{self.catalog_name}.{domain}_bronze",
             "notifications": [
                 {
-                    "alerts": [
-                        {
-                            "alert_id": f"pipeline-{domain}-failure",
-                            "alert_type": "FAILURE"
-                        }
-                    ],
-                    "email_recipients": [
-                        "data-team@company.com"
-                    ]
+                    "alerts": [{"alert_id": f"pipeline-{domain}-failure", "alert_type": "FAILURE"}],
+                    "email_recipients": ["data-team@company.com"],
                 }
-            ]
+            ],
         }
 
         return config
@@ -3236,7 +3218,7 @@ echo "📞 Em caso de dúvidas, consulte: databricks pipelines --help"
 
         # Salva steps em arquivo
         steps_file = os.path.join(self.output_dir, "run_steps.sh")
-        with open(steps_file, 'w', encoding='utf-8') as f:
+        with open(steps_file, "w", encoding="utf-8") as f:
             f.write(steps)
 
         logger.info(f"✅ Steps de execução salvos em: {steps_file}")
@@ -3246,44 +3228,44 @@ echo "📞 Em caso de dúvidas, consulte: databricks pipelines --help"
     def _execute_pipelines_autonomously(self, pipelines: Dict[str, Dict[str, Any]]) -> Dict[str, Any]:
         """
         Executa pipelines DLT automaticamente no Databricks
-        
+
         Args:
             pipelines: Configurações dos pipelines por domínio
-            
+
         Returns:
             Dict com resultados da execução
         """
         logger.info("▶️ Iniciando execução automática de pipelines DLT...")
-        
+
         execution_results = {
             "timestamp": datetime.now().isoformat(),
             "pipelines_executed": [],
             "execution_status": {},
             "errors": [],
-            "metrics": {}
+            "metrics": {},
         }
-        
+
         for domain, pipeline_config in pipelines.items():
             logger.info(f"🚀 Executando pipeline para domínio: {domain}")
-            
+
             try:
                 result = self._execute_single_pipeline_programmatically(domain, pipeline_config)
                 execution_results["pipelines_executed"].append(domain)
                 execution_results["execution_status"][domain] = result
-                
+
                 logger.info(f"✅ Pipeline {domain}: {result.get('status', 'unknown')}")
-                
+
             except Exception as e:
                 error_msg = f"Erro na execução do pipeline {domain}: {e}"
                 logger.error(f"❌ {error_msg}")
                 execution_results["errors"].append(error_msg)
                 execution_results["execution_status"][domain] = {"status": "failed", "error": str(e)}
-                
+
         # Atualiza métricas globais
         self.metrics["execution_status"] = execution_results["execution_status"]
-        
+
         return execution_results
-        
+
     def _execute_single_pipeline(self, domain: str, pipeline_config: Dict[str, Any]) -> Dict[str, Any]:
         """
         Executa um pipeline individual
@@ -3293,12 +3275,12 @@ echo "📞 Em caso de dúvidas, consulte: databricks pipelines --help"
             logger.error("❌ Credenciais Databricks obrigatórias para execução real")
             logger.info("🔧 Verifique DATABRICKS_HOST e DATABRICKS_TOKEN no .env")
             return self._execute_simulation_locally(domain, pipeline_config)
-            
+
         if self.databricks_client:
             return self._execute_with_databricks_sdk(domain, pipeline_config)
         else:
             return self._execute_with_cli_commands(domain, pipeline_config)
-            
+
     def _execute_with_databricks_sdk(self, domain: str, pipeline_config: Dict[str, Any]) -> Dict[str, Any]:
         """
         Executa pipeline usando Databricks SDK
@@ -3306,162 +3288,162 @@ echo "📞 Em caso de dúvidas, consulte: databricks pipelines --help"
         try:
             # Cria o pipeline se não existir
             pipeline_name = f"dlt_vagas_linkedin_{domain}"
-            
+
             # Busca pipeline existente
             existing_pipelines = self.databricks_client.pipelines.list_pipelines()
             existing_pipeline = None
-            
+
             for pipeline in existing_pipelines:
                 if pipeline.name == pipeline_name:
                     existing_pipeline = pipeline
                     break
-                    
+
             if existing_pipeline:
                 logger.info(f"📋 Pipeline {pipeline_name} já existe, atualizando...")
                 pipeline_id = existing_pipeline.pipeline_id
-                
+
                 # Atualiza configuração
                 self.databricks_client.pipelines.edit(
                     pipeline_id=pipeline_id,
                     name=pipeline_name,
                     configuration=pipeline_config.get("configuration", {}),
                     libraries=pipeline_config.get("libraries", []),
-                    clusters=pipeline_config.get("clusters", [])
+                    clusters=pipeline_config.get("clusters", []),
                 )
             else:
                 logger.info(f"🆕 Criando novo pipeline {pipeline_name}...")
-                
+
                 # Configuração completa do pipeline para Databricks
                 pipeline_spec = {
                     "name": pipeline_name,
                     "storage": f"/tmp/dlt/{domain}",
                     "configuration": {
                         "pipelines.autoOptimize.managed": "true",
-                        "pipelines.autoOptimize.zOrderCols": "extract_date"
+                        "pipelines.autoOptimize.zOrderCols": "extract_date",
                     },
-                    "clusters": [{
-                        "label": "default",
-                        "num_workers": 1,
-                        "spark_conf": {
-                            "spark.databricks.cluster.profile": "singleNode",
-                            "spark.master": "local[*]"
-                        },
-                        "node_type_id": "i3.xlarge",
-                        "driver_node_type_id": "i3.xlarge"
-                    }],
-                    "libraries": [{
-                        "notebook": {
-                            "path": f"/Repos/{os.getenv('DATABRICKS_USER', 'user')}/vaga_linkedin/transform_output/dlt_{domain}_transformation"
+                    "clusters": [
+                        {
+                            "label": "default",
+                            "num_workers": 1,
+                            "spark_conf": {
+                                "spark.databricks.cluster.profile": "singleNode",
+                                "spark.master": "local[*]",
+                            },
+                            "node_type_id": "i3.xlarge",
+                            "driver_node_type_id": "i3.xlarge",
                         }
-                    }],
+                    ],
+                    "libraries": [
+                        {
+                            "notebook": {
+                                "path": f"/Repos/{os.getenv('DATABRICKS_USER', 'user')}/vaga_linkedin/transform_output/dlt_{domain}_transformation"
+                            }
+                        }
+                    ],
                     "target": f"vagas_linkedin_{domain}",
-                    "continuous": False
+                    "continuous": False,
                 }
-                
+
                 create_response = self.databricks_client.pipelines.create(**pipeline_spec)
                 pipeline_id = create_response.pipeline_id
-                
+
             # Inicia execução do pipeline
             logger.info(f"▶️ Iniciando execução do pipeline {pipeline_name}...")
-            
-            start_response = self.databricks_client.pipelines.start_update(
-                pipeline_id=pipeline_id,
-                full_refresh=True
-            )
-            
+
+            start_response = self.databricks_client.pipelines.start_update(pipeline_id=pipeline_id, full_refresh=True)
+
             update_id = start_response.update_id
-            
+
             # Monitora execução (aguarda até 30 minutos)
             max_wait_time = 30 * 60  # 30 minutos
             wait_interval = 30  # 30 segundos
             elapsed_time = 0
-            
+
             while elapsed_time < max_wait_time:
-                update_info = self.databricks_client.pipelines.get_update(
-                    pipeline_id=pipeline_id,
-                    update_id=update_id
+                update_info = self.databricks_client.pipelines.get_update(pipeline_id=pipeline_id, update_id=update_id)
+
+                status = (
+                    update_info.update.state.value if update_info.update and update_info.update.state else "UNKNOWN"
                 )
-                
-                status = update_info.update.state.value if update_info.update and update_info.update.state else "UNKNOWN"
-                
+
                 logger.info(f"⏳ Status do pipeline {domain}: {status}")
-                
+
                 if status in ["COMPLETED", "FAILED", "CANCELED"]:
                     break
-                    
+
                 time.sleep(wait_interval)
                 elapsed_time += wait_interval
-                
+
             # Coleta métricas finais
-            final_info = self.databricks_client.pipelines.get_update(
-                pipeline_id=pipeline_id,
-                update_id=update_id
-            )
-            
+            final_info = self.databricks_client.pipelines.get_update(pipeline_id=pipeline_id, update_id=update_id)
+
             return {
                 "status": status,
                 "pipeline_id": pipeline_id,
                 "update_id": update_id,
                 "execution_time_seconds": elapsed_time,
-                "final_state": final_info.update.state.value if final_info.update and final_info.update.state else "UNKNOWN",
-                "method": "databricks_sdk"
+                "final_state": (
+                    final_info.update.state.value if final_info.update and final_info.update.state else "UNKNOWN"
+                ),
+                "method": "databricks_sdk",
             }
-            
+
         except Exception as e:
             logger.error(f"❌ Erro na execução SDK: {e}")
             return {"status": "failed", "error": str(e), "method": "databricks_sdk"}
-            
+
     def _execute_with_cli_commands(self, domain: str, pipeline_config: Dict[str, Any]) -> Dict[str, Any]:
         """
         Executa pipeline usando comandos CLI como fallback
         """
         try:
             pipeline_name = f"dlt_vagas_linkedin_{domain}"
-            
+
             # Salva configuração do pipeline em arquivo JSON
             config_file = os.path.join(self.output_dir, f"pipeline_{domain}_config.json")
-            with open(config_file, 'w', encoding='utf-8') as f:
+            with open(config_file, "w", encoding="utf-8") as f:
                 json.dump(pipeline_config, f, indent=2)
-                
+
             # Comandos CLI para execução
             commands = [
                 f"databricks pipelines create --json-file {config_file}",
-                f"databricks pipelines start --pipeline-name {pipeline_name} --full-refresh"
+                f"databricks pipelines start --pipeline-name {pipeline_name} --full-refresh",
             ]
-            
+
             results = []
             for cmd in commands:
                 try:
                     logger.info(f"🔧 Executando: {cmd}")
                     result = subprocess.run(
-                        cmd.split(),
-                        capture_output=True,
-                        text=True,
-                        timeout=300  # 5 minutos timeout
+                        cmd.split(), capture_output=True, text=True, timeout=300  # 5 minutos timeout
                     )
-                    
-                    results.append({
-                        "command": cmd,
-                        "returncode": result.returncode,
-                        "stdout": result.stdout,
-                        "stderr": result.stderr
-                    })
-                    
+
+                    results.append(
+                        {
+                            "command": cmd,
+                            "returncode": result.returncode,
+                            "stdout": result.stdout,
+                            "stderr": result.stderr,
+                        }
+                    )
+
                     if result.returncode != 0:
                         logger.warning(f"⚠️ Comando falhou: {result.stderr}")
                     else:
                         logger.info(f"✅ Comando executado com sucesso")
-                        
+
                 except subprocess.TimeoutExpired:
                     logger.error(f"⏰ Timeout na execução do comando: {cmd}")
                     results.append({"command": cmd, "error": "timeout"})
-                    
+
             return {
-                "status": "completed" if all(r.get("returncode") == 0 for r in results if "returncode" in r) else "failed",
+                "status": (
+                    "completed" if all(r.get("returncode") == 0 for r in results if "returncode" in r) else "failed"
+                ),
                 "commands_executed": results,
-                "method": "cli_fallback"
+                "method": "cli_fallback",
             }
-            
+
         except Exception as e:
             logger.error(f"❌ Erro na execução CLI: {e}")
             return {"status": "failed", "error": str(e), "method": "cli_fallback"}
@@ -3469,23 +3451,31 @@ echo "📞 Em caso de dúvidas, consulte: databricks pipelines --help"
     def _generate_comprehensive_report(self, raw_profile: Dict[str, Any], execution_results: Dict[str, Any]) -> str:
         """
         Gera relatório abrangente com métricas reais de execução
-        
+
         Args:
             raw_profile: Perfil dos dados RAW
             execution_results: Resultados da execução automática
-            
+
         Returns:
             String com relatório em Markdown
         """
         logger.info("📊 Gerando relatório abrangente...")
-        
+
         # Calcula métricas de execução
-        total_time = (self.metrics["end_time"] - self.metrics["start_time"]).total_seconds() if self.metrics.get("end_time") and self.metrics.get("start_time") else 0
-        
+        total_time = (
+            (self.metrics["end_time"] - self.metrics["start_time"]).total_seconds()
+            if self.metrics.get("end_time") and self.metrics.get("start_time")
+            else 0
+        )
+
         llm_decisions_count = len(self.metrics.get("llm_decisions", []))
-        successful_pipelines = len([p for p in execution_results.get("execution_status", {}).values() if p.get("status") == "completed"])
-        failed_pipelines = len([p for p in execution_results.get("execution_status", {}).values() if p.get("status") == "failed"])
-        
+        successful_pipelines = len(
+            [p for p in execution_results.get("execution_status", {}).values() if p.get("status") == "completed"]
+        )
+        failed_pipelines = len(
+            [p for p in execution_results.get("execution_status", {}).values() if p.get("status") == "failed"]
+        )
+
     def _generate_report(self, raw_profile: Dict[str, Any]) -> str:
         """
         Gera relatório final da transformação
@@ -3738,7 +3728,7 @@ LIMIT 10
 
         # Salva relatório
         report_file = os.path.join(self.output_dir, "final_report.md")
-        with open(report_file, 'w', encoding='utf-8') as f:
+        with open(report_file, "w", encoding="utf-8") as f:
             f.write(report)
 
         logger.info(f"✅ Relatório final salvo em: {report_file}")
@@ -3755,7 +3745,7 @@ LIMIT 10
 """
             for decision in self.metrics["llm_decisions"]:
                 llm_section += f"- **{decision['step']}**: {decision.get('timestamp', 'N/A')}\n"
-                
+
         # Seção de execução automática
         execution_section = f"""
 ## ▶️ Execução Automática
@@ -3768,10 +3758,10 @@ LIMIT 10
 """
         for domain, status in execution_results.get("execution_status", {}).items():
             execution_section += f"- **{domain}**: {status.get('status', 'unknown').upper()}"
-            if status.get('error'):
+            if status.get("error"):
                 execution_section += f" - Erro: {status['error']}"
             execution_section += "\n"
-            
+
         # Relatório final completo
         report = f"""
 # 🧠 TransformAgent - Relatório de Execução Autônoma
@@ -3797,7 +3787,7 @@ LIMIT 10
 
 ### Perfil dos Dados RAW:
 """
-        
+
         # Adiciona detalhes por domínio
         for domain, profile in raw_profile.get("domains", {}).items():
             if not profile.get("error"):
@@ -3809,7 +3799,7 @@ LIMIT 10
 - Qualidade: {profile.get('note', 'Dados reais analisados')}
 
 """
-        
+
         # Análise LLM se disponível
         if raw_profile.get("llm_analysis") and not raw_profile["llm_analysis"].get("error"):
             llm_analysis = raw_profile["llm_analysis"]
@@ -3820,9 +3810,9 @@ LIMIT 10
 
 **Recomendações:**
 """
-            for rec in llm_analysis.get('data_quality_assessment', {}).get('recommendations', []):
+            for rec in llm_analysis.get("data_quality_assessment", {}).get("recommendations", []):
                 report += f"- {rec}\n"
-                
+
         # Arquivos gerados
         report += f"""
 ## 📁 Artefatos Gerados
@@ -3831,7 +3821,7 @@ LIMIT 10
 """
         for notebook in self.metrics.get("notebooks_generated", []):
             report += f"- `{os.path.basename(notebook)}`\n"
-            
+
         # Próximos passos
         if successful_pipelines > 0:
             report += f"""
@@ -3860,7 +3850,7 @@ databricks pipelines get --pipeline-name dlt_vagas_linkedin_data_engineer
 """
             for error in execution_results.get("errors", []):
                 report += f"- {error}\n"
-                
+
         # Rodapé
         report += f"""
 
@@ -3868,42 +3858,42 @@ databricks pipelines get --pipeline-name dlt_vagas_linkedin_data_engineer
 *Relatório gerado automaticamente pelo TransformAgent autônomo*
 *Powered by GPT-5 + Databricks Delta Live Tables*
 """
-        
+
         # Salva relatório
         report_file = os.path.join(self.output_dir, "comprehensive_report.md")
-        with open(report_file, 'w', encoding='utf-8') as f:
+        with open(report_file, "w", encoding="utf-8") as f:
             f.write(report)
-            
+
         logger.info(f"📊 Relatório abrangente salvo em: {report_file}")
-        
+
         return report
 
     def run_quick_validation(self) -> Dict[str, Any]:
         """
         Executa validação rápida da arquitetura medalhão sem executar pipelines.
         Verifica se os 3 notebooks DLT existem e se o Terraform está configurado.
-        
+
         Returns:
             Dict com status da validação
         """
         logger.info("🔍 Validação rápida da arquitetura medalhão...")
-        
+
         validation_result = {
             "timestamp": datetime.now().isoformat(),
             "status": "unknown",
             "notebooks_found": [],
             "notebooks_missing": [],
             "terraform_status": "unknown",
-            "domains_configured": self.domains
+            "domains_configured": self.domains,
         }
-        
+
         # 1. Verificar notebooks DLT da arquitetura medalhão
         notebooks_expected = [
             "dlt_data_engineer_transformation.py",
-            "dlt_data_analytics_transformation.py", 
-            "dlt_digital_analytics_transformation.py"
+            "dlt_data_analytics_transformation.py",
+            "dlt_digital_analytics_transformation.py",
         ]
-        
+
         for notebook in notebooks_expected:
             notebook_path = os.path.join(self.output_dir, notebook)
             if os.path.exists(notebook_path):
@@ -3912,26 +3902,22 @@ databricks pipelines get --pipeline-name dlt_vagas_linkedin_data_engineer
             else:
                 validation_result["notebooks_missing"].append(notebook)
                 logger.warning(f"⚠️ Notebook faltando: {notebook}")
-        
+
         # 2. Verificar Terraform
         terraform_dir = os.path.join(os.path.dirname(self.output_dir), "terraform_databricks")
         terraform_files = ["unified_pipelines.tf", "databricks.tfvars"]
-        
-        terraform_found = all(
-            os.path.exists(os.path.join(terraform_dir, tf_file)) 
-            for tf_file in terraform_files
-        )
-        
+
+        terraform_found = all(os.path.exists(os.path.join(terraform_dir, tf_file)) for tf_file in terraform_files)
+
         if terraform_found:
             validation_result["terraform_status"] = "ready"
             logger.info("✅ Terraform configurado para arquitetura medalhão")
         else:
             validation_result["terraform_status"] = "missing_files"
             logger.warning("⚠️ Arquivos Terraform não encontrados")
-        
+
         # 3. Status geral
-        if (len(validation_result["notebooks_found"]) == 3 and 
-            validation_result["terraform_status"] == "ready"):
+        if len(validation_result["notebooks_found"]) == 3 and validation_result["terraform_status"] == "ready":
             validation_result["status"] = "ready"
             logger.info("🎯 Arquitetura medalhão pronta para deploy!")
         elif len(validation_result["notebooks_found"]) > 0:
@@ -3940,92 +3926,92 @@ databricks pipelines get --pipeline-name dlt_vagas_linkedin_data_engineer
         else:
             validation_result["status"] = "not_ready"
             logger.error("❌ Arquitetura medalhão não está pronta")
-        
+
         return validation_result
 
     def _get_existing_pipeline_ids(self) -> Dict[str, str]:
         """
         Verifica se os pipelines da arquitetura medalhão já existem no Databricks.
         Evita deploy desnecessário do Terraform.
-        
+
         Returns:
             Dict com domain -> pipeline_id dos pipelines existentes
         """
         pipeline_ids = {}
-        
+
         try:
             if not self.databricks_client:
                 # Simular pipelines existentes para teste
                 logger.info("🔄 [SIMULAÇÃO] Verificando pipelines existentes...")
-                
+
                 # Tentar ler do terraform.tfstate se existir
                 terraform_dir = os.path.join(os.path.dirname(self.output_dir), "terraform_databricks")
                 tfstate_file = os.path.join(terraform_dir, "terraform.tfstate")
-                
+
                 if os.path.exists(tfstate_file):
                     try:
-                        with open(tfstate_file, 'r') as f:
+                        with open(tfstate_file, "r") as f:
                             tfstate = json.load(f)
-                        
+
                         # Procurar outputs no tfstate
                         outputs = tfstate.get("outputs", {})
                         clean_pipeline_ids = outputs.get("clean_pipeline_ids", {})
-                        
+
                         if "value" in clean_pipeline_ids:
                             pipeline_ids = clean_pipeline_ids["value"]
                             logger.info(f"✅ Pipelines encontrados no tfstate: {list(pipeline_ids.keys())}")
                         else:
                             logger.info("⚠️ Nenhum pipeline encontrado no tfstate")
-                            
+
                     except Exception as e:
                         logger.warning(f"⚠️ Erro ao ler tfstate: {e}")
                 else:
                     logger.info("⚠️ Arquivo terraform.tfstate não encontrado")
-                
+
                 return pipeline_ids
-            
+
             # Usar Databricks SDK para listar pipelines reais
             logger.info("🔍 Consultando pipelines no Databricks via SDK...")
-            
+
             # Nomes esperados dos pipelines
             expected_pipeline_names = {
                 "data_engineer": "data_engineer_clean_pipeline",
                 "data_analytics": "data_analytics_clean_pipeline_v2",
-                "digital_analytics": "digital_analytics_clean_pipeline_v2"
+                "digital_analytics": "digital_analytics_clean_pipeline_v2",
             }
-            
+
             # Listar todos os pipelines
             pipelines = self.databricks_client.pipelines.list_pipelines()
-            
+
             for pipeline in pipelines:
                 pipeline_name = pipeline.name
-                
+
                 # Mapear nome do pipeline para domínio
                 for domain, expected_name in expected_pipeline_names.items():
                     if pipeline_name == expected_name:
                         pipeline_ids[domain] = pipeline.pipeline_id
                         logger.info(f"✅ Pipeline encontrado: {domain} -> {pipeline.pipeline_id}")
                         break
-            
+
             if len(pipeline_ids) == 3:
                 logger.info("🎯 Todos os 3 pipelines da arquitetura medalhão encontrados!")
             else:
                 missing_domains = set(self.domains) - set(pipeline_ids.keys())
                 logger.warning(f"⚠️ Pipelines faltando: {list(missing_domains)}")
-            
+
         except Exception as e:
             logger.error(f"❌ Erro ao verificar pipelines existentes: {e}")
-        
+
         return pipeline_ids
 
     def _start_pipeline_execution(self, pipeline_id: str, domain: str) -> Dict[str, Any]:
         """
         Inicia a execução de um pipeline DLT no Databricks.
-        
+
         Args:
             pipeline_id: ID do pipeline no Databricks
             domain: Domínio do pipeline (data_engineer, data_analytics, digital_analytics)
-            
+
         Returns:
             Dict com resultado da execução
         """
@@ -4033,9 +4019,9 @@ databricks pipelines get --pipeline-name dlt_vagas_linkedin_data_engineer
             "pipeline_id": pipeline_id,
             "domain": domain,
             "status": "unknown",
-            "started_at": datetime.now().isoformat()
+            "started_at": datetime.now().isoformat(),
         }
-        
+
         try:
             if not self.databricks_client:
                 # Simular execução se SDK não disponível
@@ -4043,57 +4029,56 @@ databricks pipelines get --pipeline-name dlt_vagas_linkedin_data_engineer
                 result["status"] = "success"
                 result["message"] = "Execução simulada - SDK não disponível"
                 return result
-            
+
             # Verificar estado atual do pipeline
             pipeline_info = self.databricks_client.pipelines.get(pipeline_id)
             current_state = pipeline_info.state.value if pipeline_info.state else "UNKNOWN"
-            
+
             logger.info(f"🔍 Pipeline {domain} estado atual: {current_state}")
-            
+
             if current_state in ["RUNNING", "STARTING"]:
                 logger.info(f"✅ Pipeline {domain} já executando")
                 result["status"] = "already_running"
                 return result
-                
+
             # Iniciar execução do pipeline
             logger.info(f"▶️ Iniciando pipeline {domain}...")
             update = self.databricks_client.pipelines.start_update(
-                pipeline_id=pipeline_id,
-                full_refresh=True  # Full refresh para garantir dados atualizados
+                pipeline_id=pipeline_id, full_refresh=True  # Full refresh para garantir dados atualizados
             )
-            
+
             result["status"] = "started"
             result["update_id"] = update.update_id
             result["message"] = f"Pipeline {domain} iniciado com sucesso"
-            
+
             logger.info(f"🚀 Pipeline {domain} iniciado - Update ID: {update.update_id}")
-            
+
         except Exception as e:
             logger.error(f"❌ Erro ao iniciar pipeline {domain}: {e}")
             result["status"] = "error"
             result["error"] = str(e)
-        
+
         return result
 
     def run_dlt_pipelines_execution(self) -> Dict[str, Any]:
         """
         EXECUTA os 3 notebooks DLT da arquitetura medalhão no Databricks.
         Esta é a função principal que o Control Agent deve chamar.
-        
+
         Returns:
             Dict com resultados da execução dos 3 pipelines
         """
         logger.info("🚀 Iniciando execução dos pipelines da arquitetura medalhão...")
-        
+
         execution_results = {
             "timestamp": datetime.now().isoformat(),
             "status": "running",
             "pipelines_executed": [],
             "success_count": 0,
             "failed_count": 0,
-            "total_pipelines": 3
+            "total_pipelines": 3,
         }
-        
+
         try:
             # 1. Validar se tudo está pronto
             validation = self.run_quick_validation()
@@ -4102,54 +4087,52 @@ databricks pipelines get --pipeline-name dlt_vagas_linkedin_data_engineer
                 execution_results["status"] = "validation_failed"
                 execution_results["validation_result"] = validation
                 return execution_results
-            
+
             logger.info("✅ Validação aprovada - executando pipelines...")
-            
+
             # 2. Verificar se pipelines já existem (evitar deploy desnecessário)
             logger.info("🔍 Verificando pipelines existentes no Databricks...")
             pipeline_ids = self._get_existing_pipeline_ids()
-            
+
             if len(pipeline_ids) == 3:
                 logger.info("✅ Pipelines já existem no Databricks - pulando deploy Terraform")
                 logger.info(f"📋 Pipelines encontrados: {list(pipeline_ids.keys())}")
             else:
                 logger.info("🏗️ Pipelines não encontrados - executando deploy Terraform...")
                 terraform_result = self._execute_terraform_pipeline_deployment()
-                
+
                 if not terraform_result.get("success"):
                     logger.error("❌ Falha no deployment Terraform")
                     execution_results["status"] = "terraform_failed"
                     execution_results["terraform_error"] = terraform_result.get("error")
                     return execution_results
-                
+
                 pipeline_ids = terraform_result.get("pipeline_ids", {})
                 logger.info(f"✅ Pipelines criados via Terraform: {list(pipeline_ids.keys())}")
-            
+
             # 3. Executar todos os pipelines (existentes ou recém-criados)
             logger.info("🔄 Executando pipelines com availableNow=True...")
             for domain in self.domains:
                 logger.info(f"🎯 Executando pipeline: {domain}")
-                
+
                 if domain not in pipeline_ids:
                     logger.error(f"❌ Pipeline ID não encontrado para domínio: {domain}")
                     execution_results["failed_count"] += 1
                     continue
                 pipeline_id = pipeline_ids[domain]
                 pipeline_result = self._start_pipeline_execution(pipeline_id, domain, available_now=True)
-                
-                execution_results["pipelines_executed"].append({
-                    "domain": domain,
-                    "pipeline_id": pipeline_id,
-                    "result": pipeline_result
-                })
-                
+
+                execution_results["pipelines_executed"].append(
+                    {"domain": domain, "pipeline_id": pipeline_id, "result": pipeline_result}
+                )
+
                 if pipeline_result["status"] in ["started", "already_running", "success"]:
                     execution_results["success_count"] += 1
                     logger.info(f"✅ Pipeline {domain} executado com sucesso")
                 else:
                     execution_results["failed_count"] += 1
                     logger.error(f"❌ Falha no pipeline {domain}: {pipeline_result.get('error', 'Unknown error')}")
-            
+
             # 4. Status final
             if execution_results["success_count"] == 3:
                 execution_results["status"] = "all_success"
@@ -4160,14 +4143,14 @@ databricks pipelines get --pipeline-name dlt_vagas_linkedin_data_engineer
             else:
                 execution_results["status"] = "all_failed"
                 logger.error("❌ Nenhum pipeline executado com sucesso")
-            
+
             execution_results["finished_at"] = datetime.now().isoformat()
-            
+
         except Exception as e:
             logger.error(f"❌ Erro geral na execução dos pipelines: {e}")
             execution_results["status"] = "error"
             execution_results["error"] = str(e)
-        
+
         return execution_results
 
 
@@ -4180,48 +4163,50 @@ def main():
 
     # Execução direta do agente autônomo
     logger.info("🚀 Iniciando TransformAgent Autônomo com GPT-5...")
-    
+
     # Verifica configurações necessárias
     required_env_vars = {
         "OPENAI_API_KEY": "Chave API do OpenAI para GPT-5",
         "DATABRICKS_HOST": "URL do workspace Databricks (opcional)",
-        "DATABRICKS_TOKEN": "Token de acesso Databricks (opcional)"
+        "DATABRICKS_TOKEN": "Token de acesso Databricks (opcional)",
     }
-    
+
     missing_vars = []
     for var, description in required_env_vars.items():
         if not os.getenv(var) and var == "OPENAI_API_KEY":
             missing_vars.append(f"{var}: {description}")
-            
+
     if missing_vars:
         logger.warning("⚠️ Variáveis de ambiente não configuradas:")
         for var in missing_vars:
             logger.warning(f"  - {var}")
         logger.warning("O agente funcionará em modo simulação limitado.")
-    
+
     agent = TransformAgent()
-    
+
     try:
         # Execução totalmente autônoma
         logger.info("🤖 Iniciando processo autônomo completo...")
         result = agent.run_autonomous_transformation()
-        
-        print("\n" + "="*80)
+
+        print("\n" + "=" * 80)
         print("🎉 TRANSFORMAÇÃO AUTÔNOMA CONCLUÍDA COM SUCESSO!")
-        print("="*80)
-        
+        print("=" * 80)
+
         # Exibe métricas de autonomia
         llm_decisions = len(agent.metrics.get("llm_decisions", []))
         notebooks_generated = len(agent.metrics.get("notebooks_generated", []))
         execution_status = agent.metrics.get("execution_status", {})
         successful_pipelines = len([p for p in execution_status.values() if p.get("status") == "completed"])
-        
+
         print(f"\n🤖 AUTONOMIA ACHIEVED:")
         print(f"   • Decisões LLM tomadas: {llm_decisions}")
         print(f"   • Notebooks gerados: {notebooks_generated}")
         print(f"   • Pipelines executados: {successful_pipelines}/{len(agent.domains)}")
-        print(f"   • Tempo total: {(agent.metrics.get('end_time', datetime.now()) - agent.metrics.get('start_time', datetime.now())).total_seconds():.2f}s")
-        
+        print(
+            f"   • Tempo total: {(agent.metrics.get('end_time', datetime.now()) - agent.metrics.get('start_time', datetime.now())).total_seconds():.2f}s"
+        )
+
         # Mostra resumo dos resultados por seção
         sections = ["PLAN.yaml", "NOTEBOOKS", "PIPELINES", "RUN_STEPS", "REPORT.md"]
         for section in sections:
@@ -4233,20 +4218,20 @@ def main():
                     preview = value[:150] + "..."
                 else:
                     preview = str(value)[:150]
-                    
+
                 print(f"\n📄 {section}:")
                 print(f"   {preview}")
-        
+
         print(f"\n📁 Todos os artefatos salvos em: {agent.output_dir}/")
         print("\n🔗 AGENTE TOTALMENTE AUTÔNOMO - Execução real no Databricks!")
-        
+
         if successful_pipelines > 0:
             print("\n✅ Credenciais Databricks carregadas do .env")
             print("🚀 Pipelines executados automaticamente no workspace")
         else:
             print("\n⚠️ Configure credenciais Databricks para execução automática")
             print("📝 Ou execute manualmente: bash transform_output/run_steps.sh")
-        
+
     except Exception as e:
         logger.error(f"❌ Erro na execução autônoma: {e}")
         print(f"\n💥 ERRO NO AGENTE AUTÔNOMO: {e}")

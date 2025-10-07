@@ -16,6 +16,7 @@ if PROJECT_ROOT not in sys.path:
 
 try:
     from dotenv import load_dotenv
+
     load_dotenv()
 except ImportError:
     pass
@@ -24,6 +25,7 @@ from agents.transform_agent.transform_agent import TransformAgent
 
 try:
     from agent_chat import AgentChat
+
     AGENT_CHAT_AVAILABLE = True
 except ImportError:
     AGENT_CHAT_AVAILABLE = False
