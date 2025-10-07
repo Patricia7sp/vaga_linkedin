@@ -29,7 +29,6 @@ except ImportError:
     GCP_AVAILABLE = False
 from urllib.parse import quote
 
-
 from .linkedin_cookies import LinkedInCookieManager
 
 

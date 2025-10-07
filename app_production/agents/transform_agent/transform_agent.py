@@ -21,7 +21,6 @@ from typing import Any, Dict, List, Optional
 
 import yaml
 
-
 # Imports para Google Cloud Secret Manager
 try:
     from google.cloud import secretmanager
