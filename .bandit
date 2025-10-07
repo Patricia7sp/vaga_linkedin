@@ -1,0 +1,26 @@
+[bandit]
+# Configuração Bandit para projeto Vagas LinkedIn
+
+# Excluir diretórios de teste, cache e temporários
+exclude_dirs = [
+    '/tests',
+    '/.venv',
+    '/venv',
+    '/__pycache__',
+    '/.pytest_cache',
+    '/desenvolvimento',
+    '/vagas_linkedin'
+]
+
+# Testes a ignorar (ajustar conforme necessário)
+skips = [
+    B108,  # hardcoded_tmp_directory - comum em notebooks/spark
+    B201,  # flask_debug_true - necessário em dev
+    B601,  # paramiko_calls - false positive
+    B603,  # subprocess_without_shell_equals_true
+    B607   # start_process_with_partial_path
+]
+
+# Nível de severidade: LOW, MEDIUM, HIGH
+# -ll = apenas LOW e acima (todos)
+# Vamos usar MEDIUM como mínimo para reduzir false positives

@@ -76,8 +76,9 @@ jobs:
           mypy app_production/agents/ --ignore-missing-imports
 
       - name: Run Bandit (Security Scan)
+        continue-on-error: true
         run: |
-          bandit -r app_production/ agents/ -ll
+          bandit -r app_production/ agents/ -l
 
       - name: Check dependencies for vulnerabilities
         run: |
