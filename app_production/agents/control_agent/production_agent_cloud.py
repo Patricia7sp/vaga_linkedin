@@ -50,11 +50,24 @@ def run_cloud_pipeline() -> bool:
 
     # result pode ser dict ou string - tratar ambos os casos
     if isinstance(result, dict):
-        # Se for dict, verificar se tem dados extraídos
-        success = any(v.get("count", 0) > 0 for v in result.values() if isinstance(v, dict))
+        # Verificar se houve extração de dados
+        total_extracted = sum(v.get("count", 0) for v in result.values() if isinstance(v, dict))
+        
+        # Considerar sucesso se:
+        # 1. Extraiu ao menos 1 vaga OU
+        # 2. Processo completou sem erros (mesmo que sem vagas novas)
+        # Isso evita falhas falsas quando API não retorna vagas temporariamente
+        success = True  # Por padrão, sucesso se chegou até aqui sem exceção
+        
+        if total_extracted > 0:
+            print(f"✅ {total_extracted} vagas extraídas com sucesso")
+        else:
+            print("⚠️ Nenhuma vaga nova extraída (pode ser temporário ou sem vagas disponíveis)")
+            print("💡 Processo considerado sucesso pois não houve erro fatal")
+            
     elif isinstance(result, str):
         # Se for string, verificar se não tem erro
-        success = "erro" not in result.lower()
+        success = "erro" not in result.lower() and "falha" not in result.lower()
     else:
         success = False
 
@@ -63,7 +76,7 @@ def run_cloud_pipeline() -> bool:
     print(f"{status_icon} Extração: {duration:.2f}s")
 
     if success:
-        print("\n🎉 Extração concluída com sucesso! Dados enviados para o GCS/Kafka.")
+        print("\n🎉 Extração concluída com sucesso! Dados sincronizados com GCS.")
     else:
         print("\n❌ Falha na extração. Verifique os logs para detalhes.")
 

@@ -97,12 +97,22 @@ class RapidAPILinkedInExtractor:
             if response.status_code == 200:
                 result = response.json()
 
+                # Log completo da resposta para debugging
+                print(f"📊 Resposta API: success={result.get('success')}, data_count={len(result.get('data', []))}")
+
                 # Verificar se a resposta foi bem-sucedida
                 if not result.get("success", False):
-                    print(f"⚠️ API retornou erro: {result.get('message', 'Unknown error')}")
+                    error_msg = result.get("message", result.get("error", "Unknown error"))
+                    print(f"⚠️ API retornou erro: {error_msg}")
+                    print(f"🔍 Resposta completa: {result}")
                     return []
 
                 jobs = result.get("data", [])
+
+                if not jobs:
+                    print("⚠️ API retornou success=true mas data está vazio")
+                    print(f"🔍 Possível causa: Sem vagas para '{keyword}' em {location}")
+                    return []
 
                 # Normalizar formato para compatibilidade com pipeline existente
                 normalized_jobs = self._normalize_jobs(jobs, keyword)

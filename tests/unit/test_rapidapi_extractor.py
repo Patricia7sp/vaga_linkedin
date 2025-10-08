@@ -145,7 +145,7 @@ class TestRapidAPILinkedInExtractor:
         assert normalized[0]['work_modality'] == 'hybrid'
 
     def test_normalize_jobs_posted_time_ts_conversion(self, extractor):
-        """Test posted_time_ts conversion from listed_at"""
+        """Test posted_time_ts conversion from listed_at to ISO string"""
         jobs = [
             {
                 'id': '789',
@@ -160,7 +160,12 @@ class TestRapidAPILinkedInExtractor:
         normalized = extractor._normalize_jobs(jobs, 'test')
 
         assert normalized[0]['posted_time_ts'] is not None
-        assert isinstance(normalized[0]['posted_time_ts'], datetime)
+        # posted_time_ts now returns ISO format string (JSON serializable)
+        assert isinstance(normalized[0]['posted_time_ts'], str)
+        # Validate it's a valid ISO format
+        from dateutil import parser
+        parsed_date = parser.parse(normalized[0]['posted_time_ts'])
+        assert parsed_date is not None
         assert normalized[0]['is_recent_posting'] is True
 
     def test_normalize_jobs_location_parsing(self, extractor):
