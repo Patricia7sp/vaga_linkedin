@@ -132,8 +132,8 @@ resource "google_monitoring_alert_policy" "cloud_run_job_not_running" {
 
 # Dashboard - Cloud Run Job Monitoring
 resource "google_monitoring_dashboard" "cloud_run_job" {
-  count          = var.manage_gcp_resources ? 1 : 0
-  project        = var.gcp_project_id
+  count   = var.manage_gcp_resources ? 1 : 0
+  project = var.gcp_project_id
   dashboard_json = jsonencode({
     displayName = "Cloud Run Job - Vagas LinkedIn"
     mosaicLayout = {
@@ -151,10 +151,10 @@ resource "google_monitoring_dashboard" "cloud_run_job" {
                     timeSeriesFilter = {
                       filter = "resource.type = \"cloud_run_job\" AND resource.labels.job_name = \"${var.cloud_run_job_name}\" AND metric.type = \"run.googleapis.com/job/completed_execution_count\""
                       aggregation = {
-                        alignmentPeriod  = "60s"
-                        perSeriesAligner = "ALIGN_RATE"
+                        alignmentPeriod    = "60s"
+                        perSeriesAligner   = "ALIGN_RATE"
                         crossSeriesReducer = "REDUCE_SUM"
-                        groupByFields = ["metric.label.result"]
+                        groupByFields      = ["metric.label.result"]
                       }
                     }
                   }
