@@ -314,20 +314,34 @@ jobs:
       - name: Build and Push Docker image
         run: |
           echo "🐳 Construindo imagem Docker..."
-          gcloud builds submit \
+          
+          # Submit build e capturar o ID
+          BUILD_OUTPUT=$(gcloud builds submit \
             --tag=gcr.io/${{ env.GCP_PROJECT_ID }}/vaga-linkedin-prod:staging-${{ github.sha }} \
             --project=${{ env.GCP_PROJECT_ID }} \
             --async \
-            ./app_production
+            --format="value(id)" \
+            ./app_production)
           
+          BUILD_ID=$(echo "$BUILD_OUTPUT" | grep -v "^$" | head -1)
+          echo "📦 Build ID: $BUILD_ID"
+          
+          # Aguardar build completar
           echo "⏳ Aguardando build completar..."
-          sleep 10
-          
-          # Verificar se build completou
-          BUILD_ID=$(gcloud builds list --limit=1 --format="value(id)" --project=${{ env.GCP_PROJECT_ID }})
-          gcloud builds describe $BUILD_ID --project=${{ env.GCP_PROJECT_ID }} --format="value(status)" || echo "Build em andamento..."
-          
-          echo "✅ Build Docker iniciado com sucesso!"
+          while true; do
+            STATUS=$(gcloud builds describe $BUILD_ID --project=${{ env.GCP_PROJECT_ID }} --format="value(status)")
+            echo "Status: $STATUS"
+            
+            if [ "$STATUS" = "SUCCESS" ]; then
+              echo "✅ Build concluído com sucesso!"
+              break
+            elif [ "$STATUS" = "FAILURE" ] || [ "$STATUS" = "INTERNAL_ERROR" ] || [ "$STATUS" = "TIMEOUT" ] || [ "$STATUS" = "CANCELLED" ]; then
+              echo "❌ Build falhou com status: $STATUS"
+              exit 1
+            fi
+            
+            sleep 15
+          done
 
       - name: Deploy to Cloud Run (Staging)
         run: |
