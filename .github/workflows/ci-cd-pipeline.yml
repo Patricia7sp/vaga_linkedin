@@ -332,7 +332,8 @@ jobs:
             --project=${{ env.GCP_PROJECT_ID }} \
             --memory=2Gi \
             --cpu=1 \
-            --set-env-vars="ENVIRONMENT=staging"
+            --set-env-vars="ENVIRONMENT=staging" \
+            --set-secrets="RAPIDAPI_KEY=rapidapi-key:latest"
 
       - name: Run Smoke Tests
         run: |
@@ -384,7 +385,8 @@ jobs:
             --project=${{ env.GCP_PROJECT_ID }} \
             --memory=4Gi \
             --cpu=2 \
-            --set-env-vars="ENVIRONMENT=production"
+            --set-env-vars="ENVIRONMENT=production" \
+            --set-secrets="RAPIDAPI_KEY=rapidapi-key:latest"
 
       - name: Create GitHub Release
         uses: actions/create-release@v1
