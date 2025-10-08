@@ -312,16 +312,18 @@ jobs:
         uses: google-github-actions/setup-gcloud@v2
 
       - name: Build and Push Docker image
-        continue-on-error: true
         run: |
+          echo "🐳 Construindo imagem Docker..."
           gcloud builds submit \
             --tag=gcr.io/${{ env.GCP_PROJECT_ID }}/vaga-linkedin-prod:staging-${{ github.sha }} \
             --project=${{ env.GCP_PROJECT_ID }} \
+            --no-stream \
             ./app_production
+          echo "✅ Imagem Docker criada com sucesso!"
 
       - name: Deploy to Cloud Run (Staging)
-        continue-on-error: true
         run: |
+          echo "🚀 Fazendo deploy no Cloud Run..."
           gcloud run jobs update vaga-linkedin-prod-staging \
             --image=gcr.io/${{ env.GCP_PROJECT_ID }}/vaga-linkedin-prod:staging-${{ github.sha }} \
             --region=${{ env.GCP_REGION }} \
@@ -334,6 +336,7 @@ jobs:
             --cpu=1 \
             --set-env-vars="ENVIRONMENT=staging" \
             --set-secrets="RAPIDAPI_KEY=rapidapi-key:latest"
+          echo "✅ Deploy concluído com sucesso!"
 
       - name: Set up Python for Smoke Tests
         uses: actions/setup-python@v5

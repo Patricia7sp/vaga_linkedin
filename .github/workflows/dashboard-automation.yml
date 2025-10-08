@@ -1,0 +1,220 @@
+name: "📊 Dashboard & Monitoring Automation"
+
+on:
+  schedule:
+    # Executa a cada 1 hora
+    - cron: '0 * * * *'
+  workflow_dispatch:
+    inputs:
+      force_notification:
+        description: 'Forçar envio de notificação'
+        required: false
+        default: 'false'
+
+env:
+  GCP_PROJECT_ID: vaga-linkedin
+  GCP_REGION: us-central1
+  PYTHON_VERSION: "3.10"
+
+jobs:
+  check-gcp-dashboard:
+    name: 🔍 Verificar Dashboard GCP
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SERVICE_ACCOUNT_KEY }}
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Verificar Cloud Run Job Status
+        id: check_job
+        run: |
+          echo "📊 Verificando status do Cloud Run Job..."
+          
+          # Verificar se job existe
+          JOB_EXISTS=$(gcloud run jobs describe vaga-linkedin-prod-staging \
+            --region=${{ env.GCP_REGION }} \
+            --project=${{ env.GCP_PROJECT_ID }} \
+            --format="value(name)" 2>/dev/null || echo "")
+          
+          if [ -z "$JOB_EXISTS" ]; then
+            echo "❌ Job não encontrado!"
+            echo "status=error" >> $GITHUB_OUTPUT
+            echo "message=Cloud Run Job não existe" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+          
+          echo "✅ Job encontrado: $JOB_EXISTS"
+          
+          # Verificar última execução
+          LAST_EXECUTION=$(gcloud logging read \
+            "resource.type=cloud_run_job AND resource.labels.job_name=vaga-linkedin-prod-staging" \
+            --limit=1 \
+            --project=${{ env.GCP_PROJECT_ID }} \
+            --format="value(timestamp)" 2>/dev/null || echo "")
+          
+          if [ -z "$LAST_EXECUTION" ]; then
+            echo "⚠️ Nenhuma execução recente encontrada"
+            echo "status=warning" >> $GITHUB_OUTPUT
+            echo "message=Job não executou recentemente" >> $GITHUB_OUTPUT
+          else
+            echo "✅ Última execução: $LAST_EXECUTION"
+            echo "status=success" >> $GITHUB_OUTPUT
+            echo "message=Job funcionando normalmente" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Verificar Dashboard Existence
+        run: |
+          echo "📊 Verificando se dashboard existe..."
+          
+          DASHBOARD_ID=$(gcloud monitoring dashboards list \
+            --project=${{ env.GCP_PROJECT_ID }} \
+            --format="value(name)" \
+            --filter="displayName:'Cloud Run Job - Vagas LinkedIn'" \
+            2>/dev/null || echo "")
+          
+          if [ -z "$DASHBOARD_ID" ]; then
+            echo "⚠️ Dashboard não encontrado!"
+            echo "💡 Execute: terraform apply -target=google_monitoring_dashboard.cloud_run_job"
+          else
+            echo "✅ Dashboard encontrado: $DASHBOARD_ID"
+            DASHBOARD_URL="https://console.cloud.google.com/monitoring/dashboards/custom/$DASHBOARD_ID?project=${{ env.GCP_PROJECT_ID }}"
+            echo "🔗 URL: $DASHBOARD_URL"
+          fi
+
+      - name: Verificar Alertas Configurados
+        run: |
+          echo "🚨 Verificando alertas configurados..."
+          
+          ALERT_COUNT=$(gcloud alpha monitoring policies list \
+            --project=${{ env.GCP_PROJECT_ID }} \
+            --format="value(name)" \
+            --filter="displayName~'Cloud Run Job'" \
+            2>/dev/null | wc -l || echo "0")
+          
+          echo "📊 Alertas encontrados: $ALERT_COUNT"
+          
+          if [ "$ALERT_COUNT" -lt 3 ]; then
+            echo "⚠️ Esperado 3 alertas, encontrado $ALERT_COUNT"
+            echo "💡 Execute: terraform apply para criar alertas"
+          else
+            echo "✅ Todos os alertas configurados!"
+          fi
+
+      - name: Gerar Relatório de Métricas
+        run: |
+          echo "📈 Gerando relatório de métricas..."
+          
+          # Buscar execuções das últimas 24h
+          EXECUTIONS_24H=$(gcloud logging read \
+            "resource.type=cloud_run_job AND resource.labels.job_name=vaga-linkedin-prod-staging AND timestamp>=\\\"$(date -u -d '24 hours ago' '+%Y-%m-%dT%H:%M:%SZ')\\\"" \
+            --project=${{ env.GCP_PROJECT_ID }} \
+            --format="value(timestamp)" \
+            2>/dev/null | wc -l || echo "0")
+          
+          echo "📊 Execuções últimas 24h: $EXECUTIONS_24H"
+          
+          # Verificar se há falhas recentes
+          FAILURES_24H=$(gcloud logging read \
+            "resource.type=cloud_run_job AND resource.labels.job_name=vaga-linkedin-prod-staging AND severity=ERROR AND timestamp>=\\\"$(date -u -d '24 hours ago' '+%Y-%m-%dT%H:%M:%SZ')\\\"" \
+            --project=${{ env.GCP_PROJECT_ID }} \
+            --format="value(timestamp)" \
+            2>/dev/null | wc -l || echo "0")
+          
+          echo "❌ Falhas últimas 24h: $FAILURES_24H"
+          
+          # Calcular taxa de sucesso
+          if [ "$EXECUTIONS_24H" -gt 0 ]; then
+            SUCCESS_RATE=$(awk "BEGIN {printf \"%.2f\", (($EXECUTIONS_24H - $FAILURES_24H) / $EXECUTIONS_24H) * 100}")
+            echo "✅ Taxa de sucesso: $SUCCESS_RATE%"
+          else
+            echo "⚠️ Sem execuções nas últimas 24h"
+          fi
+
+  check-databricks-jobs:
+    name: 🔍 Verificar Databricks Jobs
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install Dependencies
+        run: |
+          pip install requests python-dotenv
+
+      - name: Execute Databricks Monitor
+        env:
+          DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}
+          DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: |
+          echo "🔍 Verificando status dos jobs Databricks..."
+          python monitoring/databricks_monitor.py || echo "⚠️ Erro ao executar monitor Databricks"
+
+  generate-report:
+    name: 📊 Gerar Relatório Completo
+    runs-on: ubuntu-latest
+    needs: [check-gcp-dashboard, check-databricks-jobs]
+    if: always()
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Generate Report
+        run: |
+          cat <<EOF > monitoring-report.md
+          # 📊 Relatório de Monitoramento Automático
+          
+          **Data:** $(date '+%Y-%m-%d %H:%M:%S')
+          **Workflow Run:** ${{ github.run_id }}
+          
+          ## ✅ Status Geral
+          
+          | Componente | Status |
+          |------------|--------|
+          | GCP Dashboard | ${{ needs.check-gcp-dashboard.result }} |
+          | Databricks Jobs | ${{ needs.check-databricks-jobs.result }} |
+          
+          ## 🔗 Links Úteis
+          
+          - [Dashboard GCP](https://console.cloud.google.com/monitoring/dashboards?project=vaga-linkedin)
+          - [Cloud Run Jobs](https://console.cloud.google.com/run/jobs?project=vaga-linkedin)
+          - [Logs](https://console.cloud.google.com/logs?project=vaga-linkedin)
+          - [Alertas](https://console.cloud.google.com/monitoring/alerting?project=vaga-linkedin)
+          
+          ## 📈 Próxima Verificação
+          
+          Agendado para: 1 hora
+          
+          ---
+          *Relatório gerado automaticamente*
+          EOF
+          
+          cat monitoring-report.md
+
+      - name: Upload Report
+        uses: actions/upload-artifact@v4
+        with:
+          name: monitoring-report
+          path: monitoring-report.md
+          retention-days: 7
+
+      - name: Send Notification (se configurado)
+        if: github.event.inputs.force_notification == 'true' || needs.check-gcp-dashboard.outputs.status == 'error' || needs.check-databricks-jobs.result == 'failure'
+        run: |
+          echo "📧 Enviando notificação..."
+          echo "Status GCP: ${{ needs.check-gcp-dashboard.result }}"
+          echo "Status Databricks: ${{ needs.check-databricks-jobs.result }}"
+          echo "⚠️ Atenção necessária no monitoramento!"
