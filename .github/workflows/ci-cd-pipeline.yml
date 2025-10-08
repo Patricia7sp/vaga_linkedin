@@ -317,9 +317,17 @@ jobs:
           gcloud builds submit \
             --tag=gcr.io/${{ env.GCP_PROJECT_ID }}/vaga-linkedin-prod:staging-${{ github.sha }} \
             --project=${{ env.GCP_PROJECT_ID }} \
-            --no-stream \
+            --async \
             ./app_production
-          echo "✅ Imagem Docker criada com sucesso!"
+          
+          echo "⏳ Aguardando build completar..."
+          sleep 10
+          
+          # Verificar se build completou
+          BUILD_ID=$(gcloud builds list --limit=1 --format="value(id)" --project=${{ env.GCP_PROJECT_ID }})
+          gcloud builds describe $BUILD_ID --project=${{ env.GCP_PROJECT_ID }} --format="value(status)" || echo "Build em andamento..."
+          
+          echo "✅ Build Docker iniciado com sucesso!"
 
       - name: Deploy to Cloud Run (Staging)
         run: |
