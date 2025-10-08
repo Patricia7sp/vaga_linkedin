@@ -167,14 +167,14 @@ class RapidAPILinkedInExtractor:
                         from dateutil import parser
 
                         posted_dt = parser.parse(posted_time)
-                        posted_time_ts = posted_dt
+                        posted_time_ts = posted_dt.isoformat()
 
                         # Calcular se é recente (< 7 dias)
                         days_ago = (datetime.now() - posted_dt).days
                         is_recent = days_ago < 7
                     except Exception:  # noqa: E722
                         # Se falhar, usar timestamp atual
-                        posted_time_ts = datetime.now()
+                        posted_time_ts = datetime.now().isoformat()
                         is_recent = True
 
                 # Inferir work_modality a partir do location
