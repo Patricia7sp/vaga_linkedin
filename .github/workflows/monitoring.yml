@@ -1,0 +1,144 @@
+name: "🔍 Monitoring - GCP & Databricks"
+
+on:
+  schedule:
+    # Roda a cada 6 horas
+    - cron: '0 */6 * * *'
+  workflow_dispatch:  # Permite execução manual
+
+env:
+  PYTHON_VERSION: "3.10"
+  GCP_PROJECT_ID: vaga-linkedin
+  GCP_REGION: us-central1
+
+jobs:
+  monitor-gcp:
+    name: "☁️ Monitor Cloud Run Jobs"
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install dependencies
+        run: |
+          pip install google-cloud-run google-cloud-logging google-cloud-storage requests
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SERVICE_ACCOUNT_KEY }}
+
+      - name: Run Smoke Tests (Cloud Run)
+        env:
+          GOOGLE_APPLICATION_CREDENTIALS: ${{ steps.auth.outputs.credentials_file_path }}
+          GCP_PROJECT_ID: ${{ env.GCP_PROJECT_ID }}
+          GCP_REGION: ${{ env.GCP_REGION }}
+          ENVIRONMENT: staging
+        run: |
+          pip install pytest
+          pytest tests/smoke/test_cloud_run_smoke.py -v --tb=short || echo "⚠️ Alguns smoke tests falharam"
+
+      - name: Check Cloud Run Job Health
+        run: |
+          echo "🔍 Verificando status do Cloud Run Job..."
+          
+          # Listar jobs
+          gcloud run jobs list --region=${{ env.GCP_REGION }} --project=${{ env.GCP_PROJECT_ID }}
+          
+          # Buscar última execução do job staging
+          LATEST_EXECUTION=$(gcloud run jobs executions list \
+            --job=vaga-linkedin-prod-staging \
+            --region=${{ env.GCP_REGION }} \
+            --project=${{ env.GCP_PROJECT_ID }} \
+            --limit=1 \
+            --format="value(metadata.name)")
+          
+          if [ -z "$LATEST_EXECUTION" ]; then
+            echo "⚠️ Nenhuma execução encontrada"
+          else
+            echo "✅ Última execução: $LATEST_EXECUTION"
+            
+            # Ver status
+            gcloud run jobs executions describe $LATEST_EXECUTION \
+              --region=${{ env.GCP_REGION }} \
+              --project=${{ env.GCP_PROJECT_ID }} \
+              --format="yaml(status)"
+          fi
+
+      - name: Check GCS Data Freshness
+        run: |
+          echo "📦 Verificando dados no Cloud Storage..."
+          
+          # Listar arquivos recentes (últimos 3 dias)
+          gsutil ls -l "gs://linkedin-dados-raw/bronze-raw/**" | tail -20 || echo "⚠️ Nenhum arquivo encontrado"
+
+  monitor-databricks:
+    name: "🧱 Monitor Databricks Jobs"
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install dependencies
+        run: |
+          pip install requests python-dotenv
+
+      - name: Run Databricks Monitor
+        env:
+          DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}
+          DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: |
+          chmod +x monitoring/databricks_monitor.py
+          python monitoring/databricks_monitor.py || echo "⚠️ Monitoramento Databricks falhou"
+
+  report:
+    name: "📊 Generate Report"
+    runs-on: ubuntu-latest
+    needs: [monitor-gcp, monitor-databricks]
+    if: always()  # Sempre roda, mesmo se jobs anteriores falharem
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Generate Monitoring Report
+        run: |
+          echo "# 📊 Relatório de Monitoramento - $(date)" > monitoring-report.md
+          echo "" >> monitoring-report.md
+          echo "## ☁️ Google Cloud Platform" >> monitoring-report.md
+          echo "- Job: vaga-linkedin-prod-staging" >> monitoring-report.md
+          echo "- Status: ${{ needs.monitor-gcp.result }}" >> monitoring-report.md
+          echo "" >> monitoring-report.md
+          echo "## 🧱 Databricks" >> monitoring-report.md
+          echo "- Status: ${{ needs.monitor-databricks.result }}" >> monitoring-report.md
+          echo "" >> monitoring-report.md
+          echo "**Workflow Run:** ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" >> monitoring-report.md
+          
+          cat monitoring-report.md
+
+      - name: Upload Report
+        uses: actions/upload-artifact@v4
+        with:
+          name: monitoring-report
+          path: monitoring-report.md
+          retention-days: 7
+
+      - name: Send Summary Notification (if failures)
+        if: ${{ needs.monitor-gcp.result == 'failure' || needs.monitor-databricks.result == 'failure' }}
+        run: |
+          echo "⚠️ Atenção! Há falhas no monitoramento."
+          echo "::warning::Verifique o relatório de monitoramento para detalhes"

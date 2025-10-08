@@ -122,6 +122,25 @@ variable "domains" {
   default     = ["data_engineer", "data_analytics", "digital_analytics"]
 }
 
+# Cloud Run Job Monitoring Variables
+variable "cloud_run_job_name" {
+  description = "Nome do Cloud Run Job para monitoramento"
+  type        = string
+  default     = "vaga-linkedin-prod-staging"
+}
+
+variable "cloud_scheduler_cron" {
+  description = "Cron schedule para Cloud Scheduler (ex: '0 8,14,20 * * *' = 3x/dia às 8h, 14h, 20h BRT)"
+  type        = string
+  default     = "0 8,14,20 * * *"
+}
+
+variable "enable_uptime_checks" {
+  description = "Habilitar uptime checks no GCS"
+  type        = bool
+  default     = false
+}
+
 # Agent Chat Variables
 variable "telegram_bot_token" {
   description = "Telegram Bot Token from BotFather"
