@@ -332,8 +332,7 @@ jobs:
             --project=${{ env.GCP_PROJECT_ID }} \
             --memory=2Gi \
             --cpu=1 \
-            --set-env-vars="ENVIRONMENT=staging" \
-            --set-secrets="DATABRICKS_TOKEN=databricks-token:latest,TELEGRAM_BOT_TOKEN=telegram-bot-token:latest,RAPIDAPI_KEY=rapidapi-key:latest"
+            --set-env-vars="ENVIRONMENT=staging"
 
       - name: Run Smoke Tests
         run: |
@@ -385,8 +384,7 @@ jobs:
             --project=${{ env.GCP_PROJECT_ID }} \
             --memory=4Gi \
             --cpu=2 \
-            --set-env-vars="ENVIRONMENT=production" \
-            --set-secrets="DATABRICKS_TOKEN=databricks-token:latest,TELEGRAM_BOT_TOKEN=telegram-bot-token:latest,RAPIDAPI_KEY=rapidapi-key:latest"
+            --set-env-vars="ENVIRONMENT=production"
 
       - name: Create GitHub Release
         uses: actions/create-release@v1
