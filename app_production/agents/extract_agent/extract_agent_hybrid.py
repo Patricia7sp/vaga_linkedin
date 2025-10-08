@@ -27,14 +27,17 @@ try:
     from .extract_agent import extract_jobs_via_linkedin_scraping
 
     SELENIUM_AVAILABLE = True
-except ImportError:
+    print("✅ Selenium extractor importado com sucesso (.extract_agent)")
+except ImportError as e:
+    print(f"⚠️ Tentativa 1 falhou: {e}")
     try:
         from extract_agent import extract_jobs_via_linkedin_scraping
 
         SELENIUM_AVAILABLE = True
-    except ImportError:
+        print("✅ Selenium extractor importado com sucesso (extract_agent)")
+    except ImportError as e2:
         SELENIUM_AVAILABLE = False
-        print("⚠️ Selenium não disponível.")
+        print(f"❌ Selenium não disponível. Erro: {e2}")
 
 
 def extract_jobs_hybrid(
