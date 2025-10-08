@@ -56,10 +56,21 @@ def access_secret_version(secret_name):
         return os.getenv(secret_name.replace("-", "_").upper())
 
 
-from selenium import webdriver
-from selenium.webdriver.common.by import By
-from selenium.webdriver.support import expected_conditions as EC
-from selenium.webdriver.support.ui import WebDriverWait
+# Selenium imports (com try/except para permitir import mesmo sem Selenium)
+try:
+    from selenium import webdriver
+    from selenium.webdriver.common.by import By
+    from selenium.webdriver.support import expected_conditions as EC
+    from selenium.webdriver.support.ui import WebDriverWait
+    
+    SELENIUM_IMPORTS_AVAILABLE = True
+except ImportError as e:
+    print(f"⚠️ Selenium import falhou: {e}")
+    SELENIUM_IMPORTS_AVAILABLE = False
+    webdriver = None  # type: ignore
+    By = None  # type: ignore
+    EC = None  # type: ignore
+    WebDriverWait = None  # type: ignore
 
 # GCP Storage
 try:
@@ -371,6 +382,10 @@ def sync_data_to_gcp(data_dir, bucket_name="linkedin-dados-raw"):
 
 def setup_chrome_driver():
     """Setup Chrome driver with ENHANCED headless configuration for Cloud Run containers"""
+    if not SELENIUM_IMPORTS_AVAILABLE:
+        print("❌ Selenium não disponível - imports falharam")
+        return None
+    
     chrome_options = webdriver.ChromeOptions()
 
     # ENHANCED: Cloud Run container compatibility
