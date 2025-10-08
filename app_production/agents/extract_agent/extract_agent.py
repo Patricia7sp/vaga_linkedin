@@ -62,7 +62,7 @@ try:
     from selenium.webdriver.common.by import By
     from selenium.webdriver.support import expected_conditions as EC
     from selenium.webdriver.support.ui import WebDriverWait
-    
+
     SELENIUM_IMPORTS_AVAILABLE = True
 except ImportError as e:
     print(f"⚠️ Selenium import falhou: {e}")
@@ -385,7 +385,7 @@ def setup_chrome_driver():
     if not SELENIUM_IMPORTS_AVAILABLE:
         print("❌ Selenium não disponível - imports falharam")
         return None
-    
+
     chrome_options = webdriver.ChromeOptions()
 
     # ENHANCED: Cloud Run container compatibility
