@@ -672,9 +672,7 @@ def extract_jobs_via_linkedin_scraping(search_term, max_results=50, category=Non
                         time.sleep(random.uniform(2, 4))
 
                     wait = WebDriverWait(driver, 5)
-                    job_cards = wait.until(
-                        EC.presence_of_all_elements_located((By.CSS_SELECTOR, selector))
-                    )
+                    job_cards = wait.until(EC.presence_of_all_elements_located((By.CSS_SELECTOR, selector)))
 
                     if job_cards and len(job_cards) > 5:  # Ensure we have meaningful results
                         print(f"✅ Encontrados {len(job_cards)} elementos com seletor: {selector}")
