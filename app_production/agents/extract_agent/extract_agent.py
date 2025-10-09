@@ -543,7 +543,7 @@ def linkedin_login(driver, max_retries=3):
             try:
                 # Wait for login form to load
 
-                wait = WebDriverWait(driver, 15)
+                wait = WebDriverWait(driver, 10)
 
                 # Find email field
                 email_field = wait.until(EC.presence_of_element_located((By.ID, "username")))
@@ -671,9 +671,10 @@ def extract_jobs_via_linkedin_scraping(search_term, max_results=50, category=Non
                         # Wait longer on retry attempts
                         time.sleep(random.uniform(2, 4))
 
-                    wait = WebDriverWait(driver, 15)
-                    wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, selector)))
-                    job_cards = driver.find_elements(By.CSS_SELECTOR, selector)
+                    wait = WebDriverWait(driver, 5)
+                    job_cards = wait.until(
+                        EC.presence_of_all_elements_located((By.CSS_SELECTOR, selector))
+                    )
 
                     if job_cards and len(job_cards) > 5:  # Ensure we have meaningful results
                         print(f"✅ Encontrados {len(job_cards)} elementos com seletor: {selector}")
@@ -1726,9 +1727,9 @@ def run_extract_offline():
 
     # Categorias de busca
     search_categories = {
-        "data_engineer": ["Data Engineer", "Engenheiro de Dados"],
-        "data_analytics": ["Data Analytics", "Analista de Dados"],
-        "digital_analytics": ["Digital Analytics", "Product Analytics", "Marketing Analytics"],
+        "data_engineer": ["Data Engineer"],
+        "data_analytics": ["Data Analytics"],
+        "digital_analytics": ["Digital Analytics"],
     }
 
     results = {}
@@ -1743,7 +1744,7 @@ def run_extract_offline():
             if RAPIDAPI_HYBRID_AVAILABLE:
                 print("🔄 Usando extração híbrida: RapidAPI (primário) + Selenium (fallback)")
                 jobs = extract_jobs_hybrid(
-                    search_term=search_term, location="Brazil", max_results=30, category=category
+                    search_term=search_term, location="Brazil", max_results=10, category=category
                 )
             else:
                 # Fallback para Selenium puro se híbrido não disponível
