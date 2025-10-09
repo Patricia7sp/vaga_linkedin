@@ -71,6 +71,10 @@ except Exception as e:
     print(f"⚠️ Erro ao verificar Playwright: {e}")
     PLAYWRIGHT_AVAILABLE = False
 
+# Selenium availability check (ultra-fallback - código legado mantido)
+# Não importamos de verdade pois Selenium foi removido do requirements.txt
+SELENIUM_IMPORTS_AVAILABLE = False
+
 # GCP Storage
 try:
     from google.cloud import storage
