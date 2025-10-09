@@ -22,22 +22,25 @@ except ImportError:
         RAPIDAPI_AVAILABLE = False
         print("⚠️ RapidAPI não disponível.")
 
-# Importar função Selenium existente
+# Selenium será importado de forma lazy (dentro da função) para evitar circular import
+# Verificamos apenas se o módulo extract_agent existe
+SELENIUM_AVAILABLE = False
 try:
-    from .extract_agent import extract_jobs_via_linkedin_scraping
+    # Teste se podemos importar o módulo (sem importar a função ainda)
+    import importlib.util
 
-    SELENIUM_AVAILABLE = True
-    print("✅ Selenium extractor importado com sucesso (.extract_agent)")
-except ImportError as e:
-    print(f"⚠️ Tentativa 1 falhou: {e}")
-    try:
-        from extract_agent import extract_jobs_via_linkedin_scraping
+    spec = importlib.util.find_spec(".extract_agent", package="agents.extract_agent")
+    if spec is None:
+        spec = importlib.util.find_spec("extract_agent")
 
+    if spec is not None:
         SELENIUM_AVAILABLE = True
-        print("✅ Selenium extractor importado com sucesso (extract_agent)")
-    except ImportError as e2:
-        SELENIUM_AVAILABLE = False
-        print(f"❌ Selenium não disponível. Erro: {e2}")
+        print("✅ Selenium extractor disponível (import lazy)")
+    else:
+        print("⚠️ Módulo extract_agent não encontrado")
+except Exception as e:
+    SELENIUM_AVAILABLE = False
+    print(f"❌ Selenium não disponível. Erro: {e}")
 
 
 def extract_jobs_hybrid(
@@ -78,6 +81,13 @@ def extract_jobs_hybrid(
     if SELENIUM_AVAILABLE:
         try:
             print("🌐 Fallback: Usando Selenium...")
+
+            # Lazy import para evitar circular import
+            try:
+                from .extract_agent import extract_jobs_via_linkedin_scraping
+            except ImportError:
+                from extract_agent import extract_jobs_via_linkedin_scraping
+
             jobs = extract_jobs_via_linkedin_scraping(
                 search_term=search_term, max_results=max_results, category=category
             )
@@ -88,6 +98,8 @@ def extract_jobs_hybrid(
             else:
                 print("⚠️ Selenium também retornou vazio")
 
+        except ImportError as ie:
+            print(f"❌ Erro ao importar Selenium: {ie}")
         except Exception as e:
             print(f"❌ Erro Selenium: {e}")
 
