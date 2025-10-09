@@ -278,12 +278,14 @@ jobs:
             --image=gcr.io/${{ env.GCP_PROJECT_ID }}/vaga-linkedin-prod:dev-${{ github.sha }} \
             --region=${{ env.GCP_REGION }} \
             --project=${{ env.GCP_PROJECT_ID }} \
+            --task-timeout=3600 \
             || gcloud run jobs create vaga-linkedin-prod-dev \
             --image=gcr.io/${{ env.GCP_PROJECT_ID }}/vaga-linkedin-prod:dev-${{ github.sha }} \
             --region=${{ env.GCP_REGION }} \
             --project=${{ env.GCP_PROJECT_ID }} \
             --memory=2Gi \
             --cpu=1 \
+            --task-timeout=3600 \
             --set-env-vars="ENVIRONMENT=development" \
             --set-secrets="DATABRICKS_TOKEN=databricks-token:latest,TELEGRAM_BOT_TOKEN=telegram-bot-token:latest,RAPIDAPI_KEY=rapidapi-key:latest"
 
@@ -350,12 +352,14 @@ jobs:
             --image=gcr.io/${{ env.GCP_PROJECT_ID }}/vaga-linkedin-prod:staging-${{ github.sha }} \
             --region=${{ env.GCP_REGION }} \
             --project=${{ env.GCP_PROJECT_ID }} \
+            --task-timeout=3600 \
             || gcloud run jobs create vaga-linkedin-prod-staging \
             --image=gcr.io/${{ env.GCP_PROJECT_ID }}/vaga-linkedin-prod:staging-${{ github.sha }} \
             --region=${{ env.GCP_REGION }} \
             --project=${{ env.GCP_PROJECT_ID }} \
             --memory=2Gi \
             --cpu=1 \
+            --task-timeout=3600 \
             --set-env-vars="ENVIRONMENT=staging" \
             --set-secrets="RAPIDAPI_KEY=rapidapi-key:latest"
           echo "✅ Deploy concluído com sucesso!"
@@ -443,12 +447,14 @@ jobs:
             --image=gcr.io/${{ env.GCP_PROJECT_ID}}/vaga-linkedin-prod:v5-${{ github.sha }} \
             --region=${{ env.GCP_REGION }} \
             --project=${{ env.GCP_PROJECT_ID }} \
+            --task-timeout=3600 \
             || gcloud run jobs create vaga-linkedin-prod-v5 \
             --image=gcr.io/${{ env.GCP_PROJECT_ID }}/vaga-linkedin-prod:v5-${{ github.sha }} \
             --region=${{ env.GCP_REGION }} \
             --project=${{ env.GCP_PROJECT_ID }} \
             --memory=4Gi \
             --cpu=2 \
+            --task-timeout=3600 \
             --set-env-vars="ENVIRONMENT=production" \
             --set-secrets="RAPIDAPI_KEY=rapidapi-key:latest"
 
