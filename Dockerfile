@@ -6,16 +6,13 @@ WORKDIR /app
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
-    CHROME_BIN=/usr/bin/chromium \
-    CHROMEDRIVER_PATH=/usr/bin/chromedriver \
-    DISPLAY=:99
+    PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
 
+# Install system dependencies for Playwright
 RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
     wget \
     ca-certificates \
-    chromium \
-    chromium-driver \
     fonts-liberation \
     libatk-bridge2.0-0 \
     libnss3 \
@@ -26,12 +23,15 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libxrandr2 \
     libgbm1 \
     libgtk-3-0 \
+    libasound2 \
     && rm -rf /var/lib/apt/lists/*
 
 COPY requirements.txt ./
 
 RUN pip install --upgrade pip \
-    && pip install --no-cache-dir -r requirements.txt
+    && pip install --no-cache-dir -r requirements.txt \
+    && playwright install chromium \
+    && playwright install-deps chromium
 
 COPY . .
 
