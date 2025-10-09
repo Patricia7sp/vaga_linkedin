@@ -9,10 +9,11 @@ import os
 import random
 import time
 from datetime import datetime
-from urllib.parse import quote
 from typing import Dict, List
+from urllib.parse import quote
 
-from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeout
+from playwright.sync_api import TimeoutError as PlaywrightTimeout
+from playwright.sync_api import sync_playwright
 
 
 def extract_jobs_via_linkedin_playwright(

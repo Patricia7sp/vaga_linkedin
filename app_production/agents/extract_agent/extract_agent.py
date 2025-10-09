@@ -58,7 +58,8 @@ def access_secret_version(secret_name):
 
 # Playwright imports (substitui Selenium - mais rápido e robusto)
 try:
-    from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeout
+    from playwright.sync_api import TimeoutError as PlaywrightTimeout
+    from playwright.sync_api import sync_playwright
 
     PLAYWRIGHT_AVAILABLE = True
     print("✅ Playwright extractor disponível (import lazy)")
