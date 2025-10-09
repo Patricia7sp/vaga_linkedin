@@ -609,9 +609,43 @@ def linkedin_login(driver, max_retries=3):
 
 def extract_jobs_via_linkedin_scraping(search_term, max_results=50, category=None):
     """
-    Extract jobs directly from LinkedIn using web scraping with authentication.
+    Extract jobs directly from LinkedIn using Playwright (fallback para Selenium se necessário)
     """
     jobs = []
+
+    # PRIORITY 1: Try Playwright (3-5x faster than Selenium)
+    if PLAYWRIGHT_AVAILABLE:
+        try:
+            from .playwright_functions import extract_jobs_via_linkedin_playwright
+
+            print(f"🎭 Usando Playwright (otimizado)...")
+            jobs = extract_jobs_via_linkedin_playwright(
+                search_term=search_term, max_results=max_results, category=category
+            )
+
+            if jobs and len(jobs) > 0:
+                return jobs
+            else:
+                print("⚠️ Playwright não retornou vagas, tentando Selenium...")
+
+        except ImportError:
+            try:
+                from playwright_functions import extract_jobs_via_linkedin_playwright
+
+                jobs = extract_jobs_via_linkedin_playwright(
+                    search_term=search_term, max_results=max_results, category=category
+                )
+
+                if jobs and len(jobs) > 0:
+                    return jobs
+            except Exception as e:
+                print(f"❌ Erro no Playwright: {e}")
+
+        except Exception as e:
+            print(f"❌ Erro no Playwright: {e}")
+
+    # FALLBACK: Old Selenium code (if Playwright fails or unavailable)
+    print("⚠️ Usando Selenium como fallback...")
 
     try:
         print(f"🔗 Extraindo vagas do LinkedIn para '{search_term}'...")

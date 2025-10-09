@@ -29,6 +29,7 @@ PLAYWRIGHT_AVAILABLE = False
 try:
     # Teste se podemos importar o módulo (sem importar a função ainda)
     import importlib.util
+
     spec = importlib.util.find_spec(".extract_agent", package="agents.extract_agent")
     if spec is None:
         spec = importlib.util.find_spec("extract_agent")
