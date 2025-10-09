@@ -56,21 +56,15 @@ def access_secret_version(secret_name):
         return os.getenv(secret_name.replace("-", "_").upper())
 
 
-# Selenium imports (com try/except para permitir import mesmo sem Selenium)
+# Playwright imports (substitui Selenium - mais rápido e robusto)
 try:
-    from selenium import webdriver
-    from selenium.webdriver.common.by import By
-    from selenium.webdriver.support import expected_conditions as EC
-    from selenium.webdriver.support.ui import WebDriverWait
+    from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeout
 
-    SELENIUM_IMPORTS_AVAILABLE = True
+    PLAYWRIGHT_AVAILABLE = True
+    print("✅ Playwright extractor disponível (import lazy)")
 except ImportError as e:
-    print(f"⚠️ Selenium import falhou: {e}")
-    SELENIUM_IMPORTS_AVAILABLE = False
-    webdriver = None  # type: ignore
-    By = None  # type: ignore
-    EC = None  # type: ignore
-    WebDriverWait = None  # type: ignore
+    print(f"⚠️ Playwright import falhou: {e}")
+    PLAYWRIGHT_AVAILABLE = False
 
 # GCP Storage
 try:

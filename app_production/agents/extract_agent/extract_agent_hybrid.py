@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """
-Extract Agent Híbrido: RapidAPI (primário) + Selenium (fallback)
+Extract Agent Híbrido: RapidAPI (primário) + Playwright (fallback)
 Garante 100% de extração mesmo se quota RapidAPI acabar
+Playwright = 3-5x mais rápido e robusto que Selenium
 """
 
 import os
@@ -22,32 +23,31 @@ except ImportError:
         RAPIDAPI_AVAILABLE = False
         print("⚠️ RapidAPI não disponível.")
 
-# Selenium será importado de forma lazy (dentro da função) para evitar circular import
+# Playwright será importado de forma lazy (dentro da função) para evitar circular import
 # Verificamos apenas se o módulo extract_agent existe
-SELENIUM_AVAILABLE = False
+PLAYWRIGHT_AVAILABLE = False
 try:
     # Teste se podemos importar o módulo (sem importar a função ainda)
     import importlib.util
-
     spec = importlib.util.find_spec(".extract_agent", package="agents.extract_agent")
     if spec is None:
         spec = importlib.util.find_spec("extract_agent")
 
     if spec is not None:
-        SELENIUM_AVAILABLE = True
-        print("✅ Selenium extractor disponível (import lazy)")
+        PLAYWRIGHT_AVAILABLE = True
     else:
+        PLAYWRIGHT_AVAILABLE = False
         print("⚠️ Módulo extract_agent não encontrado")
 except Exception as e:
-    SELENIUM_AVAILABLE = False
-    print(f"❌ Selenium não disponível. Erro: {e}")
+    print(f"❌ Erro ao verificar módulo: {e}")
+    PLAYWRIGHT_AVAILABLE = False
 
 
 def extract_jobs_hybrid(
     search_term: str, location: str = "Brazil", max_results: int = 100, category: str = "general"
 ) -> List[Dict]:
     """
-    Extração híbrida: tenta RapidAPI primeiro, fallback para Selenium
+    Extração híbrida: tenta RapidAPI primeiro, fallback para Playwright
 
     Args:
         search_term: Termo de busca
@@ -77,10 +77,10 @@ def extract_jobs_hybrid(
         except Exception as e:
             print(f"❌ Erro RapidAPI: {e}")
 
-    # Tentativa 2: Selenium (fallback)
-    if SELENIUM_AVAILABLE:
+    # Tentativa 2: Playwright (fallback - substitui Selenium)
+    if PLAYWRIGHT_AVAILABLE:
         try:
-            print("🌐 Fallback: Usando Selenium...")
+            print("🎭 Fallback: Usando Playwright...")
 
             # Lazy import para evitar circular import
             try:
@@ -93,15 +93,15 @@ def extract_jobs_hybrid(
             )
 
             if jobs and len(jobs) > 0:
-                print(f"✅ Selenium: {len(jobs)} vagas extraídas")
+                print(f"✅ Playwright: {len(jobs)} vagas extraídas")
                 return jobs
             else:
-                print("⚠️ Selenium também retornou vazio")
+                print("⚠️ Playwright também retornou vazio")
 
         except ImportError as ie:
-            print(f"❌ Erro ao importar Selenium: {ie}")
+            print(f"❌ Erro ao importar Playwright extractor: {ie}")
         except Exception as e:
-            print(f"❌ Erro Selenium: {e}")
+            print(f"❌ Erro Playwright: {e}")
 
     print(f"❌ Falha total na extração de '{search_term}'")
     return []
@@ -111,7 +111,7 @@ def run_hybrid_extraction(categories: Dict[str, List[str]] = None, output_dir: s
     """
     Executa extração híbrida para todas as categorias
 
-    Prioriza RapidAPI, usa Selenium como backup
+    Prioriza RapidAPI, usa Playwright como backup
     """
     if categories is None:
         categories = {
