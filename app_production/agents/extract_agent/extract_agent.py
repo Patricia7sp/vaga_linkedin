@@ -56,15 +56,19 @@ def access_secret_version(secret_name):
         return os.getenv(secret_name.replace("-", "_").upper())
 
 
-# Playwright imports (substitui Selenium - mais rápido e robusto)
+# Playwright availability check (imports lazy na função)
+PLAYWRIGHT_AVAILABLE = False
 try:
-    from playwright.sync_api import TimeoutError as PlaywrightTimeout
-    from playwright.sync_api import sync_playwright
+    import importlib.util
 
-    PLAYWRIGHT_AVAILABLE = True
-    print("✅ Playwright extractor disponível (import lazy)")
-except ImportError as e:
-    print(f"⚠️ Playwright import falhou: {e}")
+    spec = importlib.util.find_spec("playwright")
+    if spec is not None:
+        PLAYWRIGHT_AVAILABLE = True
+        print("✅ Playwright extractor disponível (import lazy)")
+    else:
+        print("⚠️ Playwright não disponível")
+except Exception as e:
+    print(f"⚠️ Erro ao verificar Playwright: {e}")
     PLAYWRIGHT_AVAILABLE = False
 
 # GCP Storage
@@ -619,7 +623,7 @@ def extract_jobs_via_linkedin_scraping(search_term, max_results=50, category=Non
         try:
             from .playwright_functions import extract_jobs_via_linkedin_playwright
 
-            print(f"🎭 Usando Playwright (otimizado)...")
+            print("🎭 Usando Playwright (otimizado)...")
             jobs = extract_jobs_via_linkedin_playwright(
                 search_term=search_term, max_results=max_results, category=category
             )

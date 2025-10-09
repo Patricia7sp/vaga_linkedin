@@ -4,10 +4,7 @@ Funções de extração LinkedIn usando Playwright (substitui Selenium)
 Performance: 3-5x mais rápido, código 70% mais simples
 """
 
-import json
-import os
 import random
-import time
 from datetime import datetime
 from typing import Dict, List
 from urllib.parse import quote
