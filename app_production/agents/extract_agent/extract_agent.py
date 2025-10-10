@@ -59,14 +59,13 @@ def access_secret_version(secret_name):
 # Playwright availability check (imports lazy na função)
 PLAYWRIGHT_AVAILABLE = False
 try:
-    import importlib.util
+    from playwright.sync_api import sync_playwright
 
-    spec = importlib.util.find_spec("playwright")
-    if spec is not None:
-        PLAYWRIGHT_AVAILABLE = True
-        print("✅ Playwright extractor disponível (import lazy)")
-    else:
-        print("⚠️ Playwright não disponível")
+    PLAYWRIGHT_AVAILABLE = True
+    print("✅ Playwright extractor disponível (import lazy)")
+except ImportError as e:
+    print(f"⚠️ Playwright não disponível: {e}")
+    PLAYWRIGHT_AVAILABLE = False
 except Exception as e:
     print(f"⚠️ Erro ao verificar Playwright: {e}")
     PLAYWRIGHT_AVAILABLE = False
