@@ -53,13 +53,12 @@ def access_secret_version(secret_name):
 
     except Exception as e:
         print(f"❌ Erro ao acessar secret {secret_name}: {e}")
-        return os.getenv(secret_name.replace("-", "_").upper())
 
 
 # Playwright availability check (imports lazy na função)
 PLAYWRIGHT_AVAILABLE = False
 try:
-    from playwright.sync_api import sync_playwright
+    from playwright.sync_api import sync_playwright  # noqa: F401
 
     PLAYWRIGHT_AVAILABLE = True
     print("✅ Playwright extractor disponível (import lazy)")
