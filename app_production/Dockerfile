@@ -8,22 +8,32 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
 
-# Install system dependencies for Playwright
+# Install system dependencies for Playwright and GCloud SDK
 RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
     wget \
     ca-certificates \
     fonts-liberation \
     libatk-bridge2.0-0 \
-    libnss3 \
-    libxcb1 \
-    libxkbcommon0 \
-    libxcomposite1 \
-    libxdamage1 \
-    libxrandr2 \
+    libatk1.0-0 \
+    libatspi2.0-0 \
+    libcups2 \
+    libdbus-1-3 \
+    libdrm2 \
     libgbm1 \
     libgtk-3-0 \
+    libnspr4 \
+    libnss3 \
+    libwayland-client0 \
+    libxcomposite1 \
+    libxdamage1 \
+    libxfixes3 \
+    libxkbcommon0 \
+    libxrandr2 \
+    libxcb1 \
     libasound2 \
+    libpango-1.0-0 \
+    libcairo2 \
     && curl https://sdk.cloud.google.com | bash \
     && rm -rf /var/lib/apt/lists/*
 
@@ -34,8 +44,7 @@ COPY requirements.txt ./
 
 RUN pip install --upgrade pip \
     && pip install --no-cache-dir -r requirements.txt \
-    && python -m playwright install chromium \
-    && python -m playwright install-deps chromium
+    && python -m playwright install --with-deps chromium
 
 COPY . .
 
