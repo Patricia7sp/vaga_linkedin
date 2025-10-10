@@ -34,8 +34,8 @@ COPY requirements.txt ./
 
 RUN pip install --upgrade pip \
     && pip install --no-cache-dir -r requirements.txt \
-    && playwright install chromium \
-    && playwright install-deps chromium
+    && python -m playwright install chromium \
+    && python -m playwright install-deps chromium
 
 COPY . .
 
