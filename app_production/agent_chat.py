@@ -385,12 +385,12 @@ class AgentChat:
     # --- Setup ---------------------------------------------------------
     def ensure_tables(self) -> None:
         statements = [
-            """
+            f"""
             CREATE TABLE IF NOT EXISTS {self.STATE_TABLE} (
                 last_posted_time_ts TIMESTAMP
             )
             """,
-            """
+            f"""
             CREATE TABLE IF NOT EXISTS {self.SENT_TABLE} (
                 job_id STRING,
                 title STRING,
@@ -401,7 +401,7 @@ class AgentChat:
                 notified_ts TIMESTAMP
             )
             """,
-            """
+            f"""
             CREATE TABLE IF NOT EXISTS {self.RESPONSES_TABLE} (
                 job_id STRING,
                 decision STRING,
@@ -419,7 +419,7 @@ class AgentChat:
             self.sql.execute(statement)
 
         view_statements = [
-            """
+            f"""
             CREATE OR REPLACE VIEW {self.VIEW_RESPONSES} AS
             SELECT
                 job_id,
@@ -432,7 +432,7 @@ class AgentChat:
                 url
             FROM {self.RESPONSES_TABLE}
             """,
-            """
+            f"""
             CREATE OR REPLACE VIEW {self.VIEW_SUMMARY} AS
             SELECT
                 DATE(decision_ts) AS decision_date,
@@ -441,7 +441,7 @@ class AgentChat:
             FROM {self.RESPONSES_TABLE}
             GROUP BY DATE(decision_ts), decision
             """,
-            """
+            f"""
             CREATE OR REPLACE VIEW {self.VIEW_TOTALS} AS
             SELECT
                 decision,
@@ -492,11 +492,11 @@ class AgentChat:
         return self.run_polling_cycle()
 
     def _fetch_new_jobs(self, since: datetime) -> List[JobRecord]:
-        _since_literal = self._timestamp_literal(since)  # noqa: F841
+        since_literal = self._timestamp_literal(since)
 
         # Query com filtro de job_id já enviados
         # IMPORTANTE: Usando ingestion_timestamp porque posted_time_ts vem NULL da API RapidAPI
-        query = """
+        query = f"""
         SELECT
             domain,
             job_id,
@@ -569,7 +569,7 @@ class AgentChat:
         )
 
     def _register_sent_job(self, job: JobRecord) -> None:
-        statement = """
+        statement = f"""
             INSERT INTO {self.SENT_TABLE}
             VALUES (
                 '{job.job_id}',
@@ -612,7 +612,7 @@ class AgentChat:
 
     def _fetch_sent_job(self, job_id: str) -> Optional[JobRecord]:
         rows = self.sql.execute(
-            """
+            f"""
             SELECT job_id, title, company, work_modality, url, posted_time_ts
             FROM {self.SENT_TABLE}
             WHERE job_id = '{job_id}'
@@ -627,7 +627,7 @@ class AgentChat:
         return JobRecord.from_row(rows[0])
 
     def _record_decision(self, job: JobRecord, decision: str, sender: str) -> None:
-        statement = """
+        statement = f"""
             INSERT INTO {self.RESPONSES_TABLE}
             VALUES (
                 '{job.job_id}',
