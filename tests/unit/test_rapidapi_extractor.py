@@ -145,15 +145,19 @@ class TestRapidAPILinkedInExtractor:
         assert normalized[0]['work_modality'] == 'hybrid'
 
     def test_normalize_jobs_posted_time_ts_conversion(self, extractor):
-        """Test posted_time_ts conversion from listed_at to ISO string"""
+        """Test posted_time_ts conversion to ISO format and recent posting flag"""
+        from datetime import datetime, timedelta
+        # Use data recente (< 7 dias) para garantir is_recent_posting = True
+        recent_date = (datetime.now() - timedelta(days=3)).strftime('%Y-%m-%d')
+        
         jobs = [
             {
                 'id': '789',
-                'title': 'Test Job',
+                'title': 'Recent Job',
                 'company': {'name': 'Company C'},
-                'location': 'Brazil',
+                'location': 'Remote',
                 'url': 'https://test.com',
-                'listed_at': '2025-10-06'
+                'listed_at': recent_date
             }
         ]
 
