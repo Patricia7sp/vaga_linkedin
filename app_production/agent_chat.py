@@ -495,7 +495,8 @@ class AgentChat:
         since_literal = self._timestamp_literal(since)
 
         # Query com filtro de job_id já enviados
-        # IMPORTANTE: Usando ingestion_timestamp porque posted_time_ts vem NULL da API RapidAPI
+        # IMPORTANTE: Usa COALESCE para priorizar posted_time_ts (data real do LinkedIn)
+        # mas fallback para ingestion_timestamp quando posted_time_ts é NULL
         query = f"""
         SELECT
             domain,
@@ -509,11 +510,11 @@ class AgentChat:
             COALESCE(posted_time_ts, ingestion_timestamp) as posted_time_ts,
             url
         FROM vagas_linkedin.viz.vw_jobs_gold_all
-        WHERE ingestion_timestamp > {since_literal}
+        WHERE COALESCE(posted_time_ts, ingestion_timestamp) > {since_literal}
           AND job_id NOT IN (
               SELECT job_id FROM {self.SENT_TABLE}
           )
-        ORDER BY ingestion_timestamp ASC
+        ORDER BY COALESCE(posted_time_ts, ingestion_timestamp) ASC
         """
 
         rows = self.sql.execute(query)
