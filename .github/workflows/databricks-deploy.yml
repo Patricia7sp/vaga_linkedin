@@ -175,21 +175,21 @@ jobs:
               except Exception as e:
                   print(f'ℹ️  {path} does not exist or already deleted')
           
-          # Upload agent_chat.py
+          # Upload agent_chat.py as source file (library)
           with open('app_production/agent_chat.py', 'rb') as f:
               w.workspace.upload(
                   path='/Shared/agent_chat.py',
                   content=f.read(),
-                  format=ImportFormat.AUTO
+                  format=ImportFormat.SOURCE
               )
           print('✅ agent_chat.py uploaded to STAGING')
           
-          # Upload agent_chat_standalone notebook
+          # Upload agent_chat_standalone as PYTHON notebook (for job execution)
           with open('app_production/notebooks/agent_chat_standalone.py', 'rb') as f:
               w.workspace.upload(
                   path='/Shared/agent_chat_standalone',
                   content=f.read(),
-                  format=ImportFormat.AUTO
+                  format=ImportFormat.SOURCE
               )
           print('✅ agent_chat_standalone notebook uploaded to STAGING')
           "
