@@ -166,18 +166,14 @@ jobs:
               token=os.getenv('DATABRICKS_TOKEN')
           )
           
-          # Delete existing files (fix type mismatch from manual uploads)
-          try:
-              w.workspace.delete('/Shared/agent_chat.py')
-              print('🗑️ Deleted existing /Shared/agent_chat.py')
-          except:
-              pass  # File doesn't exist, skip
-          
-          try:
-              w.workspace.delete('/Shared/agent_chat_standalone')
-              print('🗑️ Deleted existing /Shared/agent_chat_standalone')
-          except:
-              pass  # File doesn't exist, skip
+          # Delete existing files (fix conflicts from manual uploads)
+          # Delete all variations to avoid naming conflicts
+          for path in ['/Shared/agent_chat', '/Shared/agent_chat.py', '/Shared/agent_chat_standalone']:
+              try:
+                  w.workspace.delete(path, recursive=True)
+                  print(f'🗑️ Deleted existing {path}')
+              except Exception as e:
+                  print(f'ℹ️  {path} does not exist or already deleted')
           
           # Upload agent_chat.py
           with open('app_production/agent_chat.py', 'rb') as f:
