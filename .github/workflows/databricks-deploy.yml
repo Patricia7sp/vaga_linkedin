@@ -166,13 +166,25 @@ jobs:
               token=os.getenv('DATABRICKS_TOKEN')
           )
           
+          # Delete existing files (fix type mismatch from manual uploads)
+          try:
+              w.workspace.delete('/Shared/agent_chat.py')
+              print('🗑️ Deleted existing /Shared/agent_chat.py')
+          except:
+              pass  # File doesn't exist, skip
+          
+          try:
+              w.workspace.delete('/Shared/agent_chat_standalone')
+              print('🗑️ Deleted existing /Shared/agent_chat_standalone')
+          except:
+              pass  # File doesn't exist, skip
+          
           # Upload agent_chat.py
           with open('app_production/agent_chat.py', 'rb') as f:
               w.workspace.upload(
                   path='/Shared/agent_chat.py',
                   content=f.read(),
-                  format=ImportFormat.AUTO,
-                  overwrite=True
+                  format=ImportFormat.AUTO
               )
           print('✅ agent_chat.py uploaded to STAGING')
           
@@ -181,8 +193,7 @@ jobs:
               w.workspace.upload(
                   path='/Shared/agent_chat_standalone',
                   content=f.read(),
-                  format=ImportFormat.AUTO,
-                  overwrite=True
+                  format=ImportFormat.AUTO
               )
           print('✅ agent_chat_standalone notebook uploaded to STAGING')
           "
