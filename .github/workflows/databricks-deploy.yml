@@ -151,48 +151,44 @@ jobs:
         run: |
           pip install databricks-cli databricks-sdk
 
-      - name: Upload agent_chat.py to Databricks
+      - name: Setup Databricks CLI
         env:
           DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}
           DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN }}
         run: |
-          python -c "
-          from databricks.sdk import WorkspaceClient
-          from databricks.sdk.service.workspace import ImportFormat
-          import os
+          # Configure databricks CLI
+          echo "[DEFAULT]" > ~/.databrickscfg
+          echo "host = $DATABRICKS_HOST" >> ~/.databrickscfg
+          echo "token = $DATABRICKS_TOKEN" >> ~/.databrickscfg
           
-          w = WorkspaceClient(
-              host=os.getenv('DATABRICKS_HOST'),
-              token=os.getenv('DATABRICKS_TOKEN')
-          )
-          
-          # Delete existing files (fix conflicts from manual uploads)
+          echo "✅ Databricks CLI configured"
+      
+      - name: Clean existing files
+        run: |
           # Delete all variations to avoid naming conflicts
-          for path in ['/Shared/agent_chat', '/Shared/agent_chat.py', '/Shared/agent_chat_standalone']:
-              try:
-                  w.workspace.delete(path, recursive=True)
-                  print(f'🗑️ Deleted existing {path}')
-              except Exception as e:
-                  print(f'ℹ️  {path} does not exist or already deleted')
+          for path in "/Shared/agent_chat" "/Shared/agent_chat.py" "/Shared/agent_chat_standalone"; do
+            databricks workspace delete "$path" --recursive 2>/dev/null && echo "🗑️ Deleted $path" || echo "ℹ️  $path does not exist"
+          done
+      
+      - name: Upload files to Databricks
+        run: |
+          # Upload agent_chat.py (source library)
+          databricks workspace import \
+            --file app_production/agent_chat.py \
+            --path /Shared/agent_chat.py \
+            --language PYTHON \
+            --format SOURCE \
+            --overwrite
+          echo "✅ agent_chat.py uploaded to STAGING"
           
-          # Upload agent_chat.py as source file (library)
-          with open('app_production/agent_chat.py', 'rb') as f:
-              w.workspace.upload(
-                  path='/Shared/agent_chat.py',
-                  content=f.read(),
-                  format=ImportFormat.SOURCE
-              )
-          print('✅ agent_chat.py uploaded to STAGING')
-          
-          # Upload agent_chat_standalone as PYTHON notebook (for job execution)
-          with open('app_production/notebooks/agent_chat_standalone.py', 'rb') as f:
-              w.workspace.upload(
-                  path='/Shared/agent_chat_standalone',
-                  content=f.read(),
-                  format=ImportFormat.SOURCE
-              )
-          print('✅ agent_chat_standalone notebook uploaded to STAGING')
-          "
+          # Upload agent_chat_standalone (notebook for job)
+          databricks workspace import \
+            --file app_production/notebooks/agent_chat_standalone.py \
+            --path /Shared/agent_chat_standalone \
+            --language PYTHON \
+            --format SOURCE \
+            --overwrite
+          echo "✅ agent_chat_standalone notebook uploaded to STAGING"
 
   # ==================== DEPLOY TO DATABRICKS PRODUCTION ====================
   deploy-databricks-prod:
