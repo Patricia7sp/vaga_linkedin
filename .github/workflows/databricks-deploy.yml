@@ -149,7 +149,10 @@ jobs:
 
       - name: Install Databricks CLI
         run: |
-          pip install databricks-cli databricks-sdk
+          # Uninstall old deprecated CLI
+          pip uninstall -y databricks-cli 2>/dev/null || true
+          # Install ONLY new CLI (from databricks-sdk package)
+          pip install databricks-sdk
 
       - name: Setup Databricks CLI
         env:
