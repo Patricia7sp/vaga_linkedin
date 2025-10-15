@@ -173,20 +173,18 @@ jobs:
       - name: Upload files to Databricks
         run: |
           # Upload agent_chat.py (source library)
-          databricks workspace import \
+          databricks workspace import /Shared/agent_chat.py \
             --file app_production/agent_chat.py \
-            --path /Shared/agent_chat.py \
-            --language PYTHON \
             --format SOURCE \
+            --language PYTHON \
             --overwrite
           echo "✅ agent_chat.py uploaded to STAGING"
           
           # Upload agent_chat_standalone (notebook for job)
-          databricks workspace import \
+          databricks workspace import /Shared/agent_chat_standalone \
             --file app_production/notebooks/agent_chat_standalone.py \
-            --path /Shared/agent_chat_standalone \
-            --language PYTHON \
             --format SOURCE \
+            --language PYTHON \
             --overwrite
           echo "✅ agent_chat_standalone notebook uploaded to STAGING"
 
