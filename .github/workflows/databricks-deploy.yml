@@ -171,7 +171,7 @@ jobs:
               w.workspace.upload(
                   path='/Shared/agent_chat.py',
                   content=f.read(),
-                  format=ImportFormat.SOURCE,
+                  format=ImportFormat.AUTO,
                   overwrite=True
               )
           print('✅ agent_chat.py uploaded to STAGING')
@@ -181,7 +181,7 @@ jobs:
               w.workspace.upload(
                   path='/Shared/agent_chat_standalone',
                   content=f.read(),
-                  format=ImportFormat.SOURCE,
+                  format=ImportFormat.AUTO,
                   overwrite=True
               )
           print('✅ agent_chat_standalone notebook uploaded to STAGING')
