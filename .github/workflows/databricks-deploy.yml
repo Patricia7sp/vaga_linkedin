@@ -149,10 +149,10 @@ jobs:
 
       - name: Install Databricks CLI
         run: |
-          # Uninstall old deprecated CLI
-          pip uninstall -y databricks-cli 2>/dev/null || true
-          # Install ONLY new CLI (from databricks-sdk package)
-          pip install databricks-sdk
+          # Install databricks CLI (provides 'databricks' command)
+          pip install databricks-cli
+          # Upgrade to latest version
+          pip install --upgrade databricks-cli
 
       - name: Setup Databricks CLI
         env:
@@ -176,17 +176,18 @@ jobs:
       - name: Upload files to Databricks
         run: |
           # Upload agent_chat.py (source library)
-          databricks workspace import /Shared/agent_chat.py \
-            --file app_production/agent_chat.py \
-            --format SOURCE \
+          # Syntax: databricks workspace import SOURCE_PATH TARGET_PATH --language PYTHON --overwrite
+          databricks workspace import \
+            app_production/agent_chat.py \
+            /Shared/agent_chat.py \
             --language PYTHON \
             --overwrite
           echo "✅ agent_chat.py uploaded to STAGING"
           
           # Upload agent_chat_standalone (notebook for job)
-          databricks workspace import /Shared/agent_chat_standalone \
-            --file app_production/notebooks/agent_chat_standalone.py \
-            --format SOURCE \
+          databricks workspace import \
+            app_production/notebooks/agent_chat_standalone.py \
+            /Shared/agent_chat_standalone \
             --language PYTHON \
             --overwrite
           echo "✅ agent_chat_standalone notebook uploaded to STAGING"
