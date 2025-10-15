@@ -4,10 +4,10 @@ on:
   push:
     branches: [main, develop]
     paths:
-      - 'agents/**'
-      - 'agent_chat.py'
+      - 'app_production/agents/**'
+      - 'app_production/agent_chat.py'
+      - 'app_production/notebooks/**'
       - 'databricks_**'
-      - 'notebooks/**'
       - '.github/workflows/databricks-deploy.yml'
   workflow_dispatch:
     inputs:
@@ -45,8 +45,9 @@ jobs:
 
       - name: Validate Python files
         run: |
-          python -m py_compile agent_chat.py
-          python -m py_compile agents/**/*.py
+          python -m py_compile app_production/agent_chat.py
+          python -m py_compile app_production/notebooks/agent_chat_standalone.py
+          find app_production/agents -name "*.py" -exec python -m py_compile {} \;
 
       - name: Run Databricks-specific tests
         run: |
@@ -162,14 +163,24 @@ jobs:
           )
           
           # Upload agent_chat.py
-          with open('agent_chat.py', 'rb') as f:
+          with open('app_production/agent_chat.py', 'rb') as f:
               w.workspace.upload(
-                  path='/Shared/staging/agent_chat.py',
+                  path='/Shared/agent_chat.py',
                   content=f.read(),
                   format=ImportFormat.SOURCE,
                   overwrite=True
               )
           print('✅ agent_chat.py uploaded to STAGING')
+          
+          # Upload agent_chat_standalone notebook
+          with open('app_production/notebooks/agent_chat_standalone.py', 'rb') as f:
+              w.workspace.upload(
+                  path='/Shared/agent_chat_standalone',
+                  content=f.read(),
+                  format=ImportFormat.SOURCE,
+                  overwrite=True
+              )
+          print('✅ agent_chat_standalone notebook uploaded to STAGING')
           "
 
   # ==================== DEPLOY TO DATABRICKS PRODUCTION ====================
