@@ -140,14 +140,15 @@ class AgentChatDatabricks:
         
         jobs = []
         for row in rows:
+            # PySpark Row objects don't support .get(), use direct access with None handling
             jobs.append(JobRecord(
                 job_id=str(row["job_id"]),
                 title=str(row["title"]),
                 company=str(row["company"]),
-                work_modality=str(row.get("work_modality", "")),
+                work_modality=str(row["work_modality"]) if row["work_modality"] else "",
                 url=str(row["url"]),
                 posted_time_ts=row["posted_time_ts"],
-                domain=str(row.get("domain", "unknown"))
+                domain=str(row["domain"]) if row["domain"] else "unknown"
             ))
         
         return jobs
