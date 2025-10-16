@@ -218,24 +218,6 @@ LinkedIn → Selenium → Kafka → PySpark → GCP Storage
 
 ---
 
-## 🔄 Pipeline CI/CD (GitHub → Cloud Run)
-
-```
-1. git push → 2. GitHub Actions → 3. Build Docker → 4. Update Cloud Run → 5. Deploy Automático
-```
-
-**Workflows:**
-- ✅ ci-cd-pipeline.yml - Deploy Cloud Run
-- ✅ databricks-deploy.yml - Deploy Databricks  
-- ✅ auto-promote-to-prod.yml - Auto-promoção
-
-**Quality Gates:**
-- Code Quality (Black, Flake8, Pylint)
-- Unit Tests (pytest > 70% coverage)
-- Security Scan (Bandit, Trivy)
-
----
-
 ## 📎 Observações
 
 - O projeto é de cunho pessoal e visa aprendizado com tecnologias de dados em ambiente realista.
