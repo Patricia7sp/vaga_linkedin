@@ -169,7 +169,7 @@ jobs:
       - name: Clean existing files
         run: |
           # Delete all variations to avoid naming conflicts
-          for path in "/Shared/agent_chat" "/Shared/agent_chat.py" "/Shared/agent_chat_standalone"; do
+          for path in "/Shared/agent_chat" "/Shared/agent_chat.py" "/Shared/agent_chat_standalone" "/Shared/linkedin_pipeline_runner_notebook"; do
             databricks workspace delete "$path" --recursive 2>/dev/null && echo "🗑️ Deleted $path" || echo "ℹ️  $path does not exist"
           done
       
@@ -184,13 +184,21 @@ jobs:
             --overwrite
           echo "✅ agent_chat.py uploaded to STAGING"
           
-          # Upload agent_chat_standalone (notebook for job)
+          # Upload agent_chat_standalone (notebook for standalone job)
           databricks workspace import \
             app_production/notebooks/agent_chat_standalone.py \
             /Shared/agent_chat_standalone \
             --language PYTHON \
             --overwrite
           echo "✅ agent_chat_standalone notebook uploaded to STAGING"
+          
+          # Upload linkedin_pipeline_runner_notebook (notebook for linkedin-pipeline-v4 job)
+          databricks workspace import \
+            app_production/notebooks/linkedin_pipeline_runner_notebook.py \
+            /Shared/linkedin_pipeline_runner_notebook \
+            --language PYTHON \
+            --overwrite
+          echo "✅ linkedin_pipeline_runner_notebook uploaded to STAGING"
 
   # ==================== DEPLOY TO DATABRICKS PRODUCTION ====================
   deploy-databricks-prod:
