@@ -200,25 +200,25 @@ jobs:
             --overwrite
           echo "✅ linkedin_pipeline_runner_notebook uploaded to STAGING"
           
-          # Upload DLT notebook - data_engineer
+          # Upload DLT notebook - data_engineer (PRODUÇÃO)
           databricks workspace import \
-            app_production/notebooks_dlt/dlt_data_engineer_transformation.py \
+            app_production/agents/transform_agent/notebooks/dlt_data_engineer_transformation.py \
             /Shared/dlt_data_engineer_transformation \
             --language PYTHON \
             --overwrite
           echo "✅ dlt_data_engineer_transformation uploaded to STAGING"
           
-          # Upload DLT notebook - data_analytics
+          # Upload DLT notebook - data_analytics (PRODUÇÃO)
           databricks workspace import \
-            app_production/notebooks_dlt/dlt_data_analytics_transformation.py \
+            app_production/agents/transform_agent/notebooks/dlt_data_analytics_transformation.py \
             /Shared/dlt_data_analytics_transformation \
             --language PYTHON \
             --overwrite
           echo "✅ dlt_data_analytics_transformation uploaded to STAGING"
           
-          # Upload DLT notebook - digital_analytics
+          # Upload DLT notebook - digital_analytics (PRODUÇÃO)
           databricks workspace import \
-            app_production/notebooks_dlt/dlt_digital_analytics_transformation.py \
+            app_production/agents/transform_agent/notebooks/dlt_digital_analytics_transformation.py \
             /Shared/dlt_digital_analytics_transformation \
             --language PYTHON \
             --overwrite

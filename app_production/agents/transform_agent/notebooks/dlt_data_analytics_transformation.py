@@ -222,8 +222,9 @@ def silver_md_data_analytics():
             .when(col("description_length") > 200, lit("medium"))
             .otherwise(lit("low")),
         )
-        # Deduplicação final
-        .dropDuplicates(["job_id"])
+        # REMOVIDO: .dropDuplicates(["job_id"]) 
+        # ↑ Causa problema em streaming - mantém estado infinito
+        # Delta Lake já faz MERGE automático de duplicatas
         .select(
             "job_id",
             "title",
