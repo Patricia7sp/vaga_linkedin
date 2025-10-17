@@ -199,6 +199,14 @@ jobs:
             --language PYTHON \
             --overwrite
           echo "✅ linkedin_pipeline_runner_notebook uploaded to STAGING"
+          
+          # Upload DLT notebook - data_engineer
+          databricks workspace import \
+            app_production/notebooks_dlt/dlt_data_engineer_transformation.py \
+            /Shared/dlt_data_engineer_transformation \
+            --language PYTHON \
+            --overwrite
+          echo "✅ dlt_data_engineer_transformation uploaded to STAGING"
 
   # ==================== DEPLOY TO DATABRICKS PRODUCTION ====================
   deploy-databricks-prod:
