@@ -124,3 +124,6 @@ venv.bak/
 desenvolvimento/
 
 .databricks
+
+# Arquivos temporários arquivados
+.archive/
