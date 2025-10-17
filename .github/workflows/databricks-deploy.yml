@@ -207,6 +207,22 @@ jobs:
             --language PYTHON \
             --overwrite
           echo "✅ dlt_data_engineer_transformation uploaded to STAGING"
+          
+          # Upload DLT notebook - data_analytics
+          databricks workspace import \
+            app_production/notebooks_dlt/dlt_data_analytics_transformation.py \
+            /Shared/dlt_data_analytics_transformation \
+            --language PYTHON \
+            --overwrite
+          echo "✅ dlt_data_analytics_transformation uploaded to STAGING"
+          
+          # Upload DLT notebook - digital_analytics
+          databricks workspace import \
+            app_production/notebooks_dlt/dlt_digital_analytics_transformation.py \
+            /Shared/dlt_digital_analytics_transformation \
+            --language PYTHON \
+            --overwrite
+          echo "✅ dlt_digital_analytics_transformation uploaded to STAGING"
 
   # ==================== DEPLOY TO DATABRICKS PRODUCTION ====================
   deploy-databricks-prod:
