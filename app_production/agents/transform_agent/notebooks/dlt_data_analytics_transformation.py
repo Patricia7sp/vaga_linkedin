@@ -4,9 +4,11 @@ from pyspark.sql.functions import (
     coalesce,
     col,
     current_timestamp,
+    desc,
     expr,
     lit,
     lower,
+    row_number,
 )
 from pyspark.sql.functions import regexp_replace
 from pyspark.sql.functions import regexp_replace as re_replace
@@ -16,6 +18,7 @@ from pyspark.sql.functions import (
     trim,
     when,
 )
+from pyspark.sql.window import Window
 from pyspark.sql.types import *
 
 # =========================
@@ -189,10 +192,12 @@ def silver_stg_data_analytics():
         "delta.autoOptimize.optimizeWrite": "true",
         "delta.autoOptimize.autoCompact": "true",
         "quality": "silver_md",
+        "pipelines.reset.allowed": "true",
     },
 )
 @dlt.expect("unique_job_id", "job_id IS NOT NULL")
 @dlt.expect("valid_location", "location IS NOT NULL AND length(location) > 2")
+@dlt.expect_or_drop("no_empty_fields", "(job_id IS NOT NULL AND job_id != '') AND (title IS NOT NULL AND title != '')")
 def silver_md_data_analytics():
     """
     Camada Silver-MD: Modelagem final com regras de negócio
@@ -222,9 +227,13 @@ def silver_md_data_analytics():
             .when(col("description_length") > 200, lit("medium"))
             .otherwise(lit("low")),
         )
-        # REMOVIDO: .dropDuplicates(["job_id"]) 
-        # ↑ Causa problema em streaming - mantém estado infinito
-        # Delta Lake já faz MERGE automático de duplicatas
+        # Filtrar linhas inválidas (campos críticos nulos/vazios)
+        .filter(
+            (col("job_id").isNotNull()) & (col("job_id") != "") &
+            (col("title").isNotNull()) & (col("title") != "") &
+            (col("company").isNotNull()) & (col("company") != "") &
+            (col("location").isNotNull()) & (col("location") != "")
+        )
         .select(
             "job_id",
             "title",
@@ -264,19 +273,25 @@ def silver_md_data_analytics():
 # =========================
 @dlt.table(
     name="data_analytics_gold",
-    comment="Gold — Controle de visões e métricas para demanda de negócio",
+    comment="Gold — Controle de visões e métricas para demanda de negócio (deduplicated)",
     table_properties={
         "delta.autoOptimize.optimizeWrite": "true",
         "delta.autoOptimize.autoCompact": "true",
         "quality": "gold",
+        "pipelines.reset.allowed": "true",
     },
 )
 @dlt.expect("has_job_id", "job_id IS NOT NULL")
 @dlt.expect("has_ingestion_ts", "ingestion_timestamp IS NOT NULL")
+@dlt.expect_or_drop("unique_job_id_gold", "job_id IS NOT NULL AND job_id != ''")
 def gold_data_analytics():
     """
     Camada Gold: Visões e métricas finais para consumo de negócio
+    Deduplicação por job_id mantendo o registro mais recente
     """
+    # Window para deduplicação: particiona por job_id, ordena por ingestion_timestamp desc
+    window_spec = Window.partitionBy("job_id").orderBy(desc("ingestion_timestamp"))
+    
     return (
         dlt.read_stream("data_analytics_silver_md")
         .withWatermark("processed_timestamp", "2 days")
@@ -289,6 +304,10 @@ def gold_data_analytics():
             .when(col("city").isin("brasília", "curitiba", "porto alegre"), lit("tier_2"))
             .otherwise(lit("tier_3")),
         )
+        # Deduplicação: adiciona row_number e filtra apenas row_num = 1
+        .withColumn("row_num", row_number().over(window_spec))
+        .filter(col("row_num") == 1)
+        .drop("row_num")
         # Seleção final para consumo (removido extract_date para evitar conflito de merge)
         .select(
             "job_id",
