@@ -8,7 +8,6 @@ from pyspark.sql.functions import (
     expr,
     lit,
     lower,
-    row_number,
 )
 from pyspark.sql.functions import regexp_replace
 from pyspark.sql.functions import regexp_replace as re_replace
@@ -18,7 +17,6 @@ from pyspark.sql.functions import (
     trim,
     when,
 )
-from pyspark.sql.window import Window
 from pyspark.sql.types import *
 
 # =========================
@@ -288,11 +286,8 @@ def silver_md_digital_analytics():
 def gold_digital_analytics():
     """
     Camada Gold: Visões e métricas finais para consumo de negócio
-    Deduplicação por job_id mantendo o registro mais recente
+    Deduplicação por job_id usando dropDuplicatesWithinWatermark (streaming-compatible)
     """
-    # Window para deduplicação: particiona por job_id, ordena por ingestion_timestamp desc
-    window_spec = Window.partitionBy("job_id").orderBy(desc("ingestion_timestamp"))
-    
     return (
         dlt.read_stream("digital_analytics_silver_md")
         .withWatermark("processed_timestamp", "2 days")
@@ -305,10 +300,9 @@ def gold_digital_analytics():
             .when(col("city").isin("brasília", "curitiba", "porto alegre"), lit("tier_2"))
             .otherwise(lit("tier_3")),
         )
-        # Deduplicação: adiciona row_number e filtra apenas row_num = 1
-        .withColumn("row_num", row_number().over(window_spec))
-        .filter(col("row_num") == 1)
-        .drop("row_num")
+        # Deduplicação streaming-compatible: dropDuplicatesWithinWatermark
+        # Mantém apenas o primeiro registro de cada job_id dentro da janela de watermark
+        .dropDuplicatesWithinWatermark(["job_id"])
         # Seleção final para consumo
         .select(
             "job_id",
