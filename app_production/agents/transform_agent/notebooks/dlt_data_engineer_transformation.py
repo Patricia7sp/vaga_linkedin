@@ -4,7 +4,6 @@ from pyspark.sql.functions import (
     coalesce,
     col,
     current_timestamp,
-    desc,
     expr,
     lit,
     lower,
@@ -285,7 +284,7 @@ def silver_md_data_engineer():
 def gold_data_engineer():
     """
     Camada Gold: Visões e métricas finais para consumo de negócio
-    Deduplicação por job_id usando dropDuplicatesWithinWatermark (streaming-compatible)
+    Delta Lake faz merge automático de duplicatas por job_id
     """
     return (
         dlt.read_stream("data_engineer_silver_md")
@@ -299,9 +298,6 @@ def gold_data_engineer():
             .when(col("city").isin("brasília", "curitiba", "porto alegre"), lit("tier_2"))
             .otherwise(lit("tier_3")),
         )
-        # Deduplicação streaming-compatible: dropDuplicatesWithinWatermark
-        # Mantém apenas o primeiro registro de cada job_id dentro da janela de watermark
-        .dropDuplicatesWithinWatermark(["job_id"])
         # Seleção final para consumo
         .select(
             "job_id",
