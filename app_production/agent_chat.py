@@ -497,6 +497,7 @@ class AgentChat:
         # Query com filtro de job_id já enviados
         # IMPORTANTE: Usa COALESCE para priorizar posted_time_ts (data real do LinkedIn)
         # mas fallback para ingestion_timestamp quando posted_time_ts é NULL
+        # FILTRO: Apenas vagas de cidades brasileiras
         query = f"""
         SELECT
             domain,
@@ -513,6 +514,22 @@ class AgentChat:
         WHERE COALESCE(posted_time_ts, ingestion_timestamp) > {since_literal}
           AND job_id NOT IN (
               SELECT job_id FROM {self.SENT_TABLE}
+          )
+          AND LOWER(city) IN (
+              'são paulo', 'rio de janeiro', 'belo horizonte', 'brasília', 'curitiba',
+              'porto alegre', 'salvador', 'fortaleza', 'recife', 'manaus',
+              'belém', 'goiânia', 'campinas', 'são luís', 'maceió',
+              'natal', 'joão pessoa', 'teresina', 'campo grande', 'cuiabá',
+              'florianópolis', 'vitória', 'aracaju', 'são josé dos campos',
+              'ribeirão preto', 'sorocaba', 'uberlândia', 'contagem', 'joinville',
+              'londrina', 'niterói', 'santos', 'osasco', 'guarulhos',
+              'são bernardo do campo', 'duque de caxias', 'nova iguaçu',
+              'são gonçalo', 'mauá', 'carapicuíba', 'piracicaba', 'bauru',
+              'jundiaí', 'franca', 'são josé do rio preto', 'blumenau',
+              'caxias do sul', 'pelotas', 'canoas', 'maringá', 'cascavel',
+              'foz do iguaçu', 'ponta grossa', 'petrolina', 'juiz de fora',
+              'montes claros', 'uberaba', 'imperatriz', 'palmas', 'macapá',
+              'boa vista', 'rio branco', 'porto velho', 'santarém', 'ananindeua'
           )
         ORDER BY COALESCE(posted_time_ts, ingestion_timestamp) ASC
         """
