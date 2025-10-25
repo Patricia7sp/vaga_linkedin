@@ -495,8 +495,8 @@ class AgentChat:
         since_literal = self._timestamp_literal(since)
 
         # Query com filtro de job_id já enviados
-        # IMPORTANTE: Usa COALESCE para priorizar posted_time_ts (data real do LinkedIn)
-        # mas fallback para ingestion_timestamp quando posted_time_ts é NULL
+        # IMPORTANTE: Usa effective_posted_time (já calculado na view com COALESCE)
+        # Isso garante que vagas com posted_time_ts NULL sejam identificadas
         # FILTRO: Apenas vagas de cidades brasileiras
         query = f"""
         SELECT
@@ -508,10 +508,10 @@ class AgentChat:
             country,
             state,
             city,
-            COALESCE(posted_time_ts, ingestion_timestamp) as posted_time_ts,
+            effective_posted_time as posted_time_ts,
             url
         FROM vagas_linkedin.viz.vw_jobs_gold_all
-        WHERE COALESCE(posted_time_ts, ingestion_timestamp) > {since_literal}
+        WHERE effective_posted_time > {since_literal}
           AND job_id NOT IN (
               SELECT job_id FROM {self.SENT_TABLE}
           )
@@ -531,7 +531,7 @@ class AgentChat:
               'montes claros', 'uberaba', 'imperatriz', 'palmas', 'macapá',
               'boa vista', 'rio branco', 'porto velho', 'santarém', 'ananindeua'
           )
-        ORDER BY COALESCE(posted_time_ts, ingestion_timestamp) ASC
+        ORDER BY effective_posted_time ASC
         """
 
         rows = self.sql.execute(query)
