@@ -105,17 +105,17 @@ class AgentChatDatabricks:
         except:
             pass
         
-        # Default: últimas 6 horas
+        # Default: últimos 30 dias (para pegar vagas desde 16/10)
         from datetime import timedelta
-        default = datetime.now() - timedelta(hours=6)
-        print(f"ℹ️ Sem checkpoint - usando janela de 6h: {default}")
+        default = datetime.now() - timedelta(days=30)
+        print(f"ℹ️ Sem checkpoint - usando janela de 30 dias: {default}")
         return default
     
     def _fetch_new_jobs(self, since: datetime) -> List[JobRecord]:
-        """Buscar vagas NOVAS usando COALESCE (CORRIGIDO!)"""
+        """Buscar vagas NOVAS usando effective_posted_time (CORRIGIDO!)"""
         since_literal = self._timestamp_literal(since)
         
-        # Query CORRIGIDA com COALESCE
+        # Query CORRIGIDA com effective_posted_time + filtro de cidades brasileiras
         query = f"""
         SELECT
             domain,
@@ -123,14 +123,31 @@ class AgentChatDatabricks:
             title,
             company,
             work_modality,
+            city,
             url,
-            COALESCE(posted_time_ts, ingestion_timestamp) as posted_time_ts
+            effective_posted_time as posted_time_ts
         FROM vagas_linkedin.viz.vw_jobs_gold_all
-        WHERE COALESCE(posted_time_ts, ingestion_timestamp) > {since_literal}
+        WHERE effective_posted_time > {since_literal}
           AND job_id NOT IN (
               SELECT job_id FROM {self.SENT_TABLE}
           )
-        ORDER BY COALESCE(posted_time_ts, ingestion_timestamp) ASC
+          AND LOWER(city) IN (
+              'são paulo', 'rio de janeiro', 'belo horizonte', 'brasília', 'curitiba',
+              'porto alegre', 'salvador', 'fortaleza', 'recife', 'manaus',
+              'belém', 'goiânia', 'campinas', 'são luís', 'maceió',
+              'natal', 'joão pessoa', 'teresina', 'campo grande', 'cuiabá',
+              'florianópolis', 'vitória', 'aracaju', 'são josé dos campos',
+              'ribeirão preto', 'sorocaba', 'uberlândia', 'contagem', 'joinville',
+              'londrina', 'niterói', 'santos', 'osasco', 'guarulhos',
+              'são bernardo do campo', 'duque de caxias', 'nova iguaçu',
+              'são gonçalo', 'mauá', 'carapicuíba', 'piracicaba', 'bauru',
+              'jundiaí', 'franca', 'são josé do rio preto', 'blumenau',
+              'caxias do sul', 'pelotas', 'canoas', 'maringá', 'cascavel',
+              'foz do iguaçu', 'ponta grossa', 'petrolina', 'juiz de fora',
+              'montes claros', 'uberaba', 'imperatriz', 'palmas', 'macapá',
+              'boa vista', 'rio branco', 'porto velho', 'santarém', 'ananindeua'
+          )
+        ORDER BY effective_posted_time ASC
         LIMIT 50
         """
         
