@@ -131,21 +131,18 @@ class AgentChatDatabricks:
           AND job_id NOT IN (
               SELECT job_id FROM {self.SENT_TABLE}
           )
-          AND LOWER(city) IN (
-              'são paulo', 'rio de janeiro', 'belo horizonte', 'brasília', 'curitiba',
-              'porto alegre', 'salvador', 'fortaleza', 'recife', 'manaus',
-              'belém', 'goiânia', 'campinas', 'são luís', 'maceió',
-              'natal', 'joão pessoa', 'teresina', 'campo grande', 'cuiabá',
-              'florianópolis', 'vitória', 'aracaju', 'são josé dos campos',
-              'ribeirão preto', 'sorocaba', 'uberlândia', 'contagem', 'joinville',
-              'londrina', 'niterói', 'santos', 'osasco', 'guarulhos',
-              'são bernardo do campo', 'duque de caxias', 'nova iguaçu',
-              'são gonçalo', 'mauá', 'carapicuíba', 'piracicaba', 'bauru',
-              'jundiaí', 'franca', 'são josé do rio preto', 'blumenau',
-              'caxias do sul', 'pelotas', 'canoas', 'maringá', 'cascavel',
-              'foz do iguaçu', 'ponta grossa', 'petrolina', 'juiz de fora',
-              'montes claros', 'uberaba', 'imperatriz', 'palmas', 'macapá',
-              'boa vista', 'rio branco', 'porto velho', 'santarém', 'ananindeua'
+          AND (
+              LOWER(city) LIKE '%brazil%' OR 
+              LOWER(city) LIKE '%brasil%' OR
+              LOWER(city) LIKE '%paulo%' OR 
+              LOWER(city) LIKE '%rio%' OR
+              LOWER(city) LIKE '%belo%' OR
+              LOWER(city) LIKE '%brasilia%' OR
+              LOWER(city) LIKE '%curitiba%' OR
+              LOWER(city) LIKE '%porto alegre%' OR
+              LOWER(city) LIKE '%salvador%' OR
+              LOWER(city) LIKE '%fortaleza%' OR
+              LOWER(city) LIKE '%recife%'
           )
         ORDER BY effective_posted_time ASC
         LIMIT 50
